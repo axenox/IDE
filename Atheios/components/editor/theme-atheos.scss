@@ -1,0 +1,169 @@
+$red: var(--red);
+$orange: var(--orange);
+$yellow:var(--yellow);
+$green: var(--green);
+$cyan: var(--cyan);
+$blue: var(--blue);
+$purple: var(--purple);
+$pink: var(--pink);
+
+$raven: var(--raven);
+$metal: var(--metal);
+$teal: var(--teal);
+$olive: var(--olive);
+
+$background: var(--background);
+$foreground: var(--foreground);
+
+$fontColorMajor: var(--fontColorMajor);
+$fontColorMinor: var(--fontColorMinor);
+$fontColorSmall:var(--fontColorSmall);
+
+.ace-atheos .ace_gutter {
+	background: $background; //background
+	color: $fontColorMinor;
+	border-right: 1px solid $foreground;
+}
+
+.ace-atheos .ace_gutter-cell.ace_warning {
+	background-image: none;
+	background: $orange; //yellow
+	border-left: none;
+	padding-left: 0;
+	color: $background;
+}
+
+.ace-atheos .ace_gutter-cell.ace_error {
+	background-position: -6px center;
+	background-image: none;
+	background: $red; //red
+	border-left: none;
+	padding-left: 0;
+	color: $background;
+
+}
+
+.ace-atheos .ace_print-margin {
+	width: 1px;
+	background: $raven;
+}
+
+.ace-atheos {
+	background-color: $background;
+	color: $fontColorMajor;
+}
+
+.ace-atheos .ace_cursor {
+	color: $cyan;
+}
+
+.ace-atheos .ace_marker-layer .ace_selection {
+	background: $blue;
+}
+
+.ace-atheos.ace_multiselect .ace_selection.ace_start {
+	box-shadow: 0 0 3px 0 $background;
+}
+
+.ace-atheos .ace_marker-layer .ace_step {
+	background: rgb(102, 82, 0);
+}
+
+.ace-atheos .ace_marker-layer .ace_bracket {
+	margin: -1px 0 0 -1px;
+	border: 1px solid $fontColorMinor;
+}
+
+.ace-atheos .ace_marker-layer .ace_active-line {
+	background: rgba(215, 215, 215, 0.031);
+}
+
+.ace-atheos .ace_gutter-active-line {
+	background-color: rgba(215, 215, 215, 0.031);
+}
+
+.ace-atheos .ace_marker-layer .ace_selected-word {
+	border: 1px solid $blue;
+}
+
+.ace-atheos .ace_invisible {
+	color: $fontColorSmall;
+}
+
+.ace-atheos .ace_keyword,
+.ace-atheos .ace_meta,
+.ace-atheos .ace_support.ace_constant.ace_property-value {
+	color: $orange;
+}
+
+.ace-atheos .ace_keyword.ace_operator {
+	color: $orange;
+}
+
+.ace-atheos .ace_keyword.ace_other.ace_unit {
+	color: $green;
+}
+
+.ace-atheos .ace_constant.ace_language {
+	color: $olive;
+}
+
+.ace-atheos .ace_constant.ace_numeric {
+	color: $green;
+}
+
+.ace-atheos .ace_constant.ace_character.ace_entity {
+	color: $purple;
+}
+
+.ace-atheos .ace_invalid {
+	color: $fontColorMajor;
+	background-color: $red;
+}
+
+.ace-atheos .ace_fold {
+	background-color: $orange;
+	border-color: $fontColorSmall;
+}
+
+.ace-atheos .ace_storage,
+.ace-atheos .ace_support,
+.ace-ambiance .ace_type {
+	color: $red;
+}
+
+.ace-atheos .ace_string {
+	color: $cyan;
+}
+
+.ace-atheos .ace_constant,
+.ace-atheos .ace_variable {
+	color: $fontColorMajor;
+}
+
+.ace-atheos .ace_comment {
+	color: $fontColorMinor;
+}
+
+.ace-atheos .ace_fold-widget.ace_start:after {
+	content: '▾'
+}
+
+.ace-atheos .ace_fold-widget.ace_end:after {
+	content: '▴'
+}
+
+.ace-atheos .ace_fold-widget.ace_closed:after {
+	content: '‣'
+}
+
+.ace-atheos .ace_entity.ace_name.ace_tag,
+.ace-atheos .ace_entity.ace_other.ace_attribute-name {
+	color: $metal;
+}
+
+.ace-atheos .ace_indent-guide {
+	border-right:
+		1px dotted $foreground;
+	margin-right: -1px;
+}

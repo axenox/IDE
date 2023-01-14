@@ -1,0 +1,80 @@
+<?php
+
+//////////////////////////////////////////////////////////////////////////////80
+// Macro Control
+//////////////////////////////////////////////////////////////////////////////80
+// Copyright (c) Atheos & Liam Siira (Atheos.io), distributed as-is and without
+// warranty under the MIT License. See [root]/docs/LICENSE.md for more.
+// This information must remain intact.
+//////////////////////////////////////////////////////////////////////////////80
+// Authors: Codiad Team, @daeks, Atheos Team, @hlsiira
+//////////////////////////////////////////////////////////////////////////////80
+
+require_once("class.macro.php");
+
+$activeUser = SESSION("user");
+$Macro = new Macro($activeUser);
+
+switch ($action) {
+
+	//////////////////////////////////////////////////////////////////////////80
+	// Load User Macros
+	//////////////////////////////////////////////////////////////////////////80
+	case "load":
+		$Macro->load();
+		break;
+
+	//////////////////////////////////////////////////////////////////////////80
+	// Create/Update macro
+	//////////////////////////////////////////////////////////////////////////80
+	case "save":
+		$uuid = POST("uuid");
+		$title = POST("title");
+		$type = POST("type");
+		$fTypes = POST("fTypes");
+		$command = POST("command");
+		if (!Common::checkAccess("configure")) {
+			Common::send("error", "Account does not have access.");
+		} elseif ($uuid && $title && $type && $fTypes && $command) {
+			$Macro->save($uuid, $title, $type, $fTypes, $command);
+		} else {
+			Common::send("error", "Missing parameter.");
+		}
+		break;
+
+
+	//////////////////////////////////////////////////////////////////////////80
+	// Delete macro
+	//////////////////////////////////////////////////////////////////////////80
+	case "delete":
+		$uuid = POST("uuid");
+		if (!Common::checkAccess("configure")) {
+			Common::send("error", "Account does not have access.");
+		} elseif ($uuid) {
+			$Macro->delete($uuid);
+		} else {
+			Common::send("error", "Missing parameter.");
+		}
+		break;
+
+
+	//////////////////////////////////////////////////////////////////////////80
+	// Save User Settings
+	//////////////////////////////////////////////////////////////////////////80
+	case "execute":
+		$uuid = POST("uuid");
+		$path = POST("path");
+		if ($uuid && $path) {
+			$Macro->execute($uuid, $path);
+		} else {
+			Common::send("error", "Missing key or value.");
+		}
+		break;
+
+	//////////////////////////////////////////////////////////////////////////80
+	// Default: Invalid Action
+	//////////////////////////////////////////////////////////////////////////80
+	default:
+		Common::send("error", "Invalid action.");
+		break;
+}
