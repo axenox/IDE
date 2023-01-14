@@ -1,0 +1,48 @@
+#logo {
+	position: fixed;
+	top: calc(25% - 200px);
+	left: calc(20% - 140px);
+	opacity: 1;
+	z-index: 1;
+
+	svg {
+		path {
+			animation: float 1.5s infinite ease-in-out alternate;
+			fill-opacity: 0;
+			stroke: $colorMajor;
+			stroke-width: 15;
+		}
+
+		#alpha {
+			stroke: $fontColorMajor;
+		}
+
+		#backdrop {
+			fill-opacity: 1;
+			fill: $background;
+			stroke: none;
+		}
+
+		.delay-1 {
+			animation-delay: 0.1s;
+		}
+
+		.delay-2 {
+			animation-delay: 0.2s;
+		}
+
+		.delay-3 {
+			animation-delay: 0.3s;
+		}
+
+		.delay-4 {
+			animation-delay: 0.4s;
+		}
+	}
+
+	@keyframes float {
+		100% {
+			transform: translateY(10px);
+		}
+	}
+}

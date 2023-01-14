@@ -1,0 +1,44 @@
+<?php
+
+//////////////////////////////////////////////////////////////////////////////80
+// TextMode Controller
+//////////////////////////////////////////////////////////////////////////////80
+// Copyright (c) Atheos & Liam Siira (Atheos.io), distributed as-is and without
+// warranty under the MIT License. See [root]/docs/LICENSE.md for more.
+// This information must remain intact.
+//////////////////////////////////////////////////////////////////////////////80
+// Authors: Codiad Team, @Fluidbyte, Atheos Team, @hlsiira
+//////////////////////////////////////////////////////////////////////////////80
+
+require_once "class.textmode.php";
+
+$TextMode = new TextMode();
+
+switch ($action) {
+	//////////////////////////////////////////////////////////////////
+	// Set custom text modes
+	//////////////////////////////////////////////////////////////////
+	case 'saveExtensionMap':
+		if (Common::checkAccess("configure")) {
+			$map = json_decode(POST('map'), true);
+
+			if (!is_array($map)) {
+				Common::send("error", "Invalid map type.");
+			}
+
+			$TextMode->saveExtensionMap($map);
+		} else {
+			Common::send("error", "User does not have access.");
+		}
+		break;
+
+	//////////////////////////////////////////////////////////////////
+	// Get text modes
+	//////////////////////////////////////////////////////////////////
+	case 'loadExtensionMap':
+		$TextMode->loadExtensionMap();
+		break;
+	default:
+		Common::send("error", "Invalid action.");
+		break;
+}
