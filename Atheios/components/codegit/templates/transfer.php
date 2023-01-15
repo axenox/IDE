@@ -3,8 +3,9 @@
 	<?php
 	$repo = Common::getWorkspacePath($repo);
 
-	$remotes = $CodeGit->getRemotes($repo, $path);
-	$branches = $CodeGit->getBranches($repo, $path);
+	// FIXME actually gitRemotes() can also return a string. So there should be some fallback for this
+	$remotes = $CodeGit->getRemotes($repo, $path) ?? [];
+	$branches = $CodeGit->getBranches($repo, $path) ?? [];
 
 	$status = $CodeGit->branchStatus($repo);
 
