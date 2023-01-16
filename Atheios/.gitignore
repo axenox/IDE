@@ -5,7 +5,6 @@ config.php
 data/*
 !data/.htaccess
 workspace/*
-plugins/*
 public/*.min.*
 
 *.disabled*
