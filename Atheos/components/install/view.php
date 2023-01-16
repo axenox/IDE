@@ -132,7 +132,7 @@ foreach ($deps as $dep => $v) {
 
 if ($missingDep || !$config || !$workspace || !$plugins || !$data || $register || $newrelic) {
 	$passed = "<span class=\"success\">" . i18n("passed") . "</span>";
-	$failed = "<span class=\"error\">" . i18n("failed") . "</span>";
+	$error = "<span class=\"error\">" . i18n("failed") . "</span>";
 
 	?>
 	<div id="installer" class="errors">
