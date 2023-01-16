@@ -5,4 +5,5 @@
 	<buildpathentry external="true" kind="lib" path="C:/wamp/www/exface/exface/vendor/exface/Core"/>
 	<buildpathentry external="true" kind="lib" path="C:/wamp/www/exface/exface/vendor/symfony"/>
 	<buildpathentry external="true" kind="lib" path="C:/wamp/www/exface/exface/vendor/psr"/>
+	<buildpathentry external="true" kind="lib" path="C:/wamp/www/exface/exface/vendor/guzzlehttp/psr7/src"/>
 </buildpath>
