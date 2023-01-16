@@ -19,8 +19,8 @@ echo "<div id=\"codegit_diff\" class=\"content\">";
 foreach ($diffs as $i => $diff) {
 
 	$element = $files[$i];
-	$element = pathinfo($element, PATHINFO_BASENAME);
-	echo "<h4 class=\"file-info\">File Name: $element</h4>";
+	$filename = pathinfo($element, PATHINFO_BASENAME);
+	echo "<h4 class=\"file-info\">File Name: $filename<span class=\"actions\" data-file=\"$element\" style=\"float:right;\"><button class=\"git_undo\">Undo</button></span></h4>";
 	echo "<ul>";
 
 	$lineNumber = 1;
