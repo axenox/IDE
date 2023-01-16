@@ -30,7 +30,7 @@ class Store {
 	protected $path;
 	protected $data;
 
-	function __construct($table = "index", $path) {
+	function __construct($table, $path) {
 		if (!is_dir($path)) mkdir($path);
 
 		$path = $path . $table . ".db.json";
