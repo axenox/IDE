@@ -14,7 +14,7 @@
 
 	const self = {
 
-		path: atheos.path + '../Plugins/Terminal/',
+		path: atheos.path + 'plugins/Terminal/',
 		activeDir: null,
 		controller: null,
 
