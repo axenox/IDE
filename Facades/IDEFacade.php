@@ -21,6 +21,6 @@ class IDEFacade extends AbstractHttpFacade
 
     public function getUrlRouteDefault(): string
     {
-        'api/ide';
+        return 'api/ide';
     }
 }
