@@ -20,11 +20,12 @@ class IDEApp extends App
      */
     public function getInstaller(InstallerInterface $installer = null)
     {        
+        $container = parent::getInstaller($installer);
         // IDE facade
         $facadeInstaller = new HttpFacadeInstaller($this->getSelector());
         $facadeInstaller->setFacade(FacadeFactory::createFromString(IDEFacade::class, $this->getWorkbench()));
-        $installer->addInstaller($facadeInstaller);
+        $container->addInstaller($facadeInstaller);
         
-        return $installer;
+        return $container;
     }
 }
