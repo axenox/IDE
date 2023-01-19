@@ -8,4 +8,4 @@ function adminer_object() {
 	));
 }
 
-include "./adminer-4.8.1.php";
+require __DIR__ . "/adminer-4.8.1.php";
