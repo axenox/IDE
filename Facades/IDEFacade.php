@@ -39,11 +39,9 @@ class IDEFacade extends AbstractHttpFacade
         
         switch (true) {
             case $target === 'adminer':
-                ob_start();
-                $this->launchAdminer();
-                $html = ob_get_contents();
-                ob_end_clean();
-                return new Response(200);
+                $lastServer = $this->getAdminerDbInSession();
+                $html = $this->launchAdminer();
+                return new Response(200, [], $html);
                 break;
         }
         
@@ -55,8 +53,31 @@ class IDEFacade extends AbstractHttpFacade
         return 'api/ide';
     }
     
-    protected function launchAdminer()
+    protected function getAdminerDbInSession() : ?string
     {
-        include __DIR__ . '/../Adminer/adminer.php';
+        $pwds = $_SESSION['pwds'];
+        if ($pwds === null) {
+            return null;
+        }
+        $servers = $pwds['server'];
+        $serverName = null;
+        foreach ($servers as $serverName => $serverData) {
+            foreach ($serverData as $userName => $userData) {
+                if (! empty($userData)) {
+                    return $serverName;
+                }
+            }
+        }
+        return null;
+    }
+    
+    protected function launchAdminer() : ?string
+    {
+        ob_start();
+        session_start();
+        require __DIR__ . '/../Adminer/adminer.php';
+        $output = ob_get_contents();
+        ob_end_clean();
+        return $output;
     }
 }
