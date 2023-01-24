@@ -16,7 +16,8 @@ trait Execute {
 		if ($code === 0) {
 			return explode("\n", $result["text"]);
 		} else {
-			return false;
+		    Common::send("error", $result["text"]);
+		    return false;
 		}
 	}
 
