@@ -2,9 +2,13 @@
 
 
 trait Transfer {
-
+    use Branches;
 
 	public function push($remote, $branch) {
+	    $current = $this->getCurrentBranch();
+	    if ($branch === $current) {
+	        $branch = '';
+	    }
 		$result = $this->execute("git push $remote $branch");
 
 		if ($result) {
