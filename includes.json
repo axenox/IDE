@@ -1,0 +1,23 @@
+[
+    {
+        "name": "atheos/atheos",
+        "version": "5.5.0",
+        "license": [
+	        "MIT"
+	    ],
+        "license_file": "Atheos/docs/LICENSE.md",
+        "description": "A self-hosted browser-based cloud IDE, updated from Codiad IDE",
+        "homepage": "https://www.atheos.io/"
+    },
+    {
+        "name": "vrana/adminer",
+        "version": "4.8.1",
+        "license": [
+	        "Apache-2.0",
+	        "GPL-2.0-only"
+	    ],
+        "license_link": "https://www.apache.org/licenses/LICENSE-2.0.html",
+        "description": "Database management in a single PHP file.",
+        "homepage": "https://www.adminer.org/"
+    }
+]
