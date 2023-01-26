@@ -6,7 +6,6 @@ function adminer_object() {
 	include_once "Plugins/tables-filter.php";
 	include_once "Plugins/AdminerForeignKeysPlugin.php";
 	include_once "Plugins/database-hide.php";
-	include_once "Plugins/FasterTablesFilter.php";
 	include_once "Plugins/readable-dates.php";
 
 	return new AdminerPlugin(array(
@@ -15,7 +14,7 @@ function adminer_object() {
 		new AdminerTablesFilter(),
 		new AdminerForeignKeys(),
 		// new AdminerDatabaseHide(),
-		// new FasterTablesFilter(),
+		
 	));
 }
 
