@@ -17,6 +17,7 @@ use exface\Core\Exceptions\UnexpectedValueException;
  * @author andrej.kabachnik
  *
  */
+
 class IDEFacade extends AbstractHttpFacade
 {
     protected function createResponse(ServerRequestInterface $request) : ResponseInterface
@@ -28,60 +29,11 @@ class IDEFacade extends AbstractHttpFacade
         $pathInFacade = mb_strtolower(StringDataType::substringAfter($path, $this->getUrlRouteDefault() . '/'));
         
         switch (true) {
-            // Autologin
-            case (StringDataType::startsWith($pathInFacade, 'adminer/')):
-                if(!count($_GET)) {
-                    $target = StringDataType::substringAfter($pathInFacade, 'adminer/');
-                    // adminer/localhost/ -> localhost
-                    $selector = rtrim($target, '/');
-                    $dataSheet = DataSheetFactory::createFromObjectIdOrAlias($this->getWorkbench(), 'exface.Core.CONNECTION');
-                    $dataSheet->getFilters()->addConditionFromString('ALIAS_WITH_NS', $selector, ComparatorDataType::EQUALS);
-                    $dataSheet->getColumns()->addMultiple([
-                        'CONFIG',
-                        'CONNECTOR',
-                        'UID',
-                        
-                    ]);
-                    $dataSheet->dataRead();
                     
-                    $row = $dataSheet->getRowsDecrypted()[0] ?? null;
-                    if ($row === null) {
-                        throw new UnexpectedValueException('Data connection "' . $selector . '" not found!');
-                    }
-                    
-                    $configJSON = $row['CONFIG'];
-                    $config = JsonDataType::decodeJson($configJSON);
-                    $connector = $row['CONNECTOR'];
-                    
-                    $_POST['auth'] = $this->getAdminerAuth($config, $connector); 
-                }
-                
-                // Adminer aufrufen
-                $html = $this->launchAdminer();
-                return new Response(200, [], $html);
-                break; 
-              
-            //Dateien einlesen   
+            // Autologin via function runAdminer
             case StringDataType::startsWith($pathInFacade, 'adminer/'):
-                $file = StringDataType::substringAfter($pathInFacade, 'adminer/');
-                $base = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'Adminer' . DIRECTORY_SEPARATOR;
-                if(file_exists($base.$file)) {
-                    $stream = fopen($base.$file, 'r');
-                    switch (FilePathDataType::findExtension($file)) {
-                        // CSS-Datei einlesen
-                        case 'css':
-                            $mimeType = 'text/css';
-                            break;
-                        // Andere Dateien einlesen
-                        Default:
-                            $mimeType = mime_content_type($base.$file);
-                            break;
-                    }
-                    return new Response(200, ['content-type' => $mimeType], $stream);
-                }
-                
-                break;
-
+            return $this->runAdminer($pathInFacade);
+              
         }
         
         return new Response(404, [], 'Nothing here yet!');
@@ -181,6 +133,71 @@ class IDEFacade extends AbstractHttpFacade
             }
         }
         return null;
+    }
+    
+    /**
+     * 
+     * @param string $pathInFacade
+     * @throws UnexpectedValueException
+     * @return ResponseInterface
+     */
+    protected function runAdminer(string $pathInFacade) : ResponseInterface
+    {
+        $target = StringDataType::substringAfter($pathInFacade, 'adminer/');
+        $selector = rtrim($target, '/');
+        $base = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'Adminer' . DIRECTORY_SEPARATOR;
+        switch (true) {
+            
+            case !file_exists($base . $selector):   
+                if(!count($_GET)) {
+                    
+                    // adminer/localhost/ -> localhost
+                    
+                    $dataSheet = DataSheetFactory::createFromObjectIdOrAlias($this->getWorkbench(), 'exface.Core.CONNECTION');
+                    $dataSheet->getFilters()->addConditionFromString('ALIAS_WITH_NS', $selector, ComparatorDataType::EQUALS);
+                    $dataSheet->getColumns()->addMultiple([
+                        'CONFIG',
+                        'CONNECTOR',
+                        'UID',  
+                    ]);
+                    
+                    $dataSheet->dataRead();
+                    
+                    $row = $dataSheet->getRowsDecrypted()[0] ?? null;
+                    if ($row === null) {
+                        throw new UnexpectedValueException('Data connection "' . $selector . '" not found!');
+                    }
+                    
+                    $configJSON = $row['CONFIG'];
+                    $config = JsonDataType::decodeJson($configJSON);
+                    $connector = $row['CONNECTOR'];
+                    
+                    $_POST['auth'] = $this->getAdminerAuth($config, $connector);
+                }
+                
+                // open Adminer
+                $html = $this->launchAdminer();
+                // remove Adminer denial of integration into iBrowser
+                header_remove('X-Frame-Options');
+                return new Response(200, [], $html);
+            
+                
+            // read different files    
+            default:
+                $file = $selector;
+                $stream = fopen($base.$file, 'r');
+                switch (FilePathDataType::findExtension($file)) {
+                    // read css-file
+                    case 'css':
+                        $mimeType = 'text/css';
+                        break;
+                        // read different file
+                    Default:
+                        $mimeType = mime_content_type($base.$file);
+                        break;
+                }
+                return new Response(200, ['content-type' => $mimeType], $stream);
+        }
     }
     
     /**
