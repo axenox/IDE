@@ -9,6 +9,7 @@ use exface\Core\DataTypes\StringDataType;
 use exface\Core\Factories\DataSheetFactory;
 use exface\Core\DataTypes\ComparatorDataType;
 use exface\Core\CommonLogic\UxonObject;
+use axenox\IDE\Common\AtheosAPI;
 
 /**
  * 
@@ -43,6 +44,11 @@ class IDEFacade extends AbstractHttpFacade
                 $html = $this->launchAdminer();
                 return new Response(200, [], $html);
                 break;
+            case StringDataType::startsWith($target, 'atheos'):
+                $path = $this->getApp()->getDirectoryAbsolutePath() . DIRECTORY_SEPARATOR . 'Atheos';
+                $api = new AtheosAPI($this->getWorkbench(), 'atheos/', $path, 'index.php');
+                return $api->handle($request);
+                break;  
         }
         
         return new Response(404, [], 'Nothing here yet!');
