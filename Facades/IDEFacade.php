@@ -186,8 +186,10 @@ class IDEFacade extends AbstractHttpFacade
                 
                 // open Adminer
                 $html = $this->launchAdminer();
+                // IDEA replacing X-Frme-Options did not work well. Sometimes the headers are sent earlier.
+                // How to prevent sending headers??? Override header() function somehow?
                 // remove Adminer denial of integration into iBrowser
-                header_remove('X-Frame-Options');
+                // header_remove('X-Frame-Options');
                 return new Response(200, [], $html);
             
                 
