@@ -124,6 +124,14 @@ class AtheosAPI extends InclusionAPI
         if ($output) {
             // TODO
         }
+        
+        unset($_POST['username']);
+        unset($_POST['password']);
+        unset($_POST['language']);
+        unset($_POST['remember']);
+        unset($_POST['target']);
+        unset($_POST['action']);
+        
         return $this;
     }
     
