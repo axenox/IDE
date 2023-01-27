@@ -12,7 +12,7 @@ function adminer_object() {
 		// TODO: inline the result of password_hash() so that the password is not visible in source codes
 	    new AdminerLoginPasswordLess(password_hash(12345678, PASSWORD_DEFAULT)),
 		new AdminerTablesFilter(),
-		new AdminerForeignKeys(),
+		// new AdminerForeignKeys(),
 		// new AdminerDatabaseHide(),
 		
 	));
