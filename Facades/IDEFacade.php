@@ -104,7 +104,7 @@ class IDEFacade extends AbstractHttpFacade
             'sqlite' => 'sqlite', // what is the difference to sqlite2???
             'pgsql' => 'pgsql',
             'oracle' => 'oracle',
-            'mssql' => 'mssql',
+            'mssql' => 'mssql_mod',
             'mongo' => 'mongo',
             'elastic' => 'elastic'
         ];
@@ -154,6 +154,10 @@ class IDEFacade extends AbstractHttpFacade
         switch (true) {
             
             case !file_exists($base . $selector):   
+                if (isset($_POST['logout'])) {
+                    $_GET = [];
+                    $_POST = [];
+                }
                 if(!count($_GET)) {
                     
                     // adminer/localhost/ -> localhost
@@ -211,6 +215,7 @@ class IDEFacade extends AbstractHttpFacade
      */
     protected function launchAdminer() : ?string
     {
+        global $adminer;
         ob_start();
         session_start();
         $cwd = getcwd();
