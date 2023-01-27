@@ -1,6 +1,7 @@
 .links+.jsonly {margin: -140px 16px 0 16px !important}
 #filter-field {width: 100%}
 #dbs > select[name=db] {visibility: hidden;}
+.logout {display: none}
 
 /*
  * Theme by Pepa Linha [http://webdream.cz]
