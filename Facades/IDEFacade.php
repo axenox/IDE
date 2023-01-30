@@ -13,6 +13,8 @@ use axenox\IDE\Common\AtheosAPI;
 use exface\Core\DataTypes\JsonDataType;
 use exface\Core\DataTypes\FilePathDataType;
 use exface\Core\Exceptions\UnexpectedValueException;
+use exface\Core\Factories\DataConnectionFactory;
+use exface\Core\CommonLogic\Selectors\DataConnectionSelector;
 
 /**
  * 
@@ -161,7 +163,6 @@ class IDEFacade extends AbstractHttpFacade
                 if(!count($_GET)) {
                     
                     // adminer/localhost/ -> localhost
-                    
                     $dataSheet = DataSheetFactory::createFromObjectIdOrAlias($this->getWorkbench(), 'exface.Core.CONNECTION');
                     $dataSheet->getFilters()->addConditionFromString('ALIAS_WITH_NS', $selector, ComparatorDataType::EQUALS);
                     $dataSheet->getColumns()->addMultiple([
@@ -172,14 +173,18 @@ class IDEFacade extends AbstractHttpFacade
                     
                     $dataSheet->dataRead();
                     
-                    $row = $dataSheet->getRowsDecrypted()[0] ?? null;
-                    if ($row === null) {
-                        throw new UnexpectedValueException('Data connection "' . $selector . '" not found!');
+                    if (strcasecmp($selector, DataConnectionSelector::METAMODEL_CONNECTION_ALIAS) === 0 || strcasecmp($selector, DataConnectionSelector::METAMODEL_CONNECTION_UID) === 0) {
+                        $config = $this->getWorkbench()->getCoreApp()->getConfig()->getOption('METAMODEL.CONNECTOR_CONFIG')->toArray();
+                        $connector = $this->getWorkbench()->getCoreApp()->getConfig()->getOption('METAMODEL.CONNECTOR');
+                    } else {
+                        $row = $dataSheet->getRowsDecrypted()[0] ?? null;
+                        if ($row === null) {
+                            throw new UnexpectedValueException('Data connection "' . $selector . '" not found!');
+                        }
+                        
+                        $config = JsonDataType::decodeJson($row['CONFIG']);
+                        $connector = $row['CONNECTOR'];
                     }
-                    
-                    $configJSON = $row['CONFIG'];
-                    $config = JsonDataType::decodeJson($configJSON);
-                    $connector = $row['CONNECTOR'];
                     
                     $_POST['auth'] = $this->getAdminerAuth($config, $connector);
                 }
