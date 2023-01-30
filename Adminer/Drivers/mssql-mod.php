@@ -652,12 +652,28 @@ WHERE sys1.xtype = 'TR' AND sys2.name = " . q($table)
 	function show_status() {
 		return array();
 	}
-
+	
 	function convert_field($field) {
+	    if (preg_match("~binary~", $field["type"])) {
+	        return "LOWER(CONVERT(VARCHAR(max), " . idf_escape($field["field"]) . ", 1))";
+	    }
 	}
-
+	
+	/** Convert value in edit after applying functions back
+	 * @param array one element from fields()
+	 * @param string
+	 * @return string
+	 */
 	function unconvert_field($field, $return) {
-		return $return;
+	    if (preg_match("~binary~", $field["type"])) {
+	        if (strcasecmp(mb_substr($return, 0, 2), '0x') === 0) {
+	            return $return;
+	        } else {
+	            // TODO How to UNHEX() in MS SQL?
+	            // $return = "UNHEX($return)";
+	        }
+	    }
+	    return $return;
 	}
 
 	function support($feature) {
