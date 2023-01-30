@@ -10,11 +10,13 @@
 // Authors: Atheos Team, @hlsiira
 //////////////////////////////////////////////////////////////////////////////80
 
+/* MOD Workbench integration
 set_error_handler(function($severity, $message, $file, $line) {
 	if (error_reporting() & $severity) {
 		throw new ErrorException($message, 0, $severity, $file, $line);
 	}
 });
+*/
 
 require_once('common.php');
 

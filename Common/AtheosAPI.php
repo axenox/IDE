@@ -13,6 +13,7 @@ use exface\Core\DataTypes\DateTimeDataType;
 use exface\Core\Interfaces\AppInterface;
 use exface\Core\Factories\AppFactory;
 use exface\Core\CommonLogic\Filemanager;
+use exface\Core\Interfaces\Selectors\AliasSelectorInterface;
 
 class AtheosAPI extends InclusionAPI
 {
@@ -48,6 +49,10 @@ class AtheosAPI extends InclusionAPI
                     $this->logIn($user, $app);
                 }
                 
+                $vendorFolder = str_replace(AliasSelectorInterface::ALIAS_NAMESPACE_DELIMITER, '/', $appSelector);
+                if (! StringDataType::endsWith($_SESSION['projectPath'], $vendorFolder, false)) {
+                    $this->switchProject($app);
+                }
                 $output = $this->includeFile($file);
                 
                 $this->restoreSession();
@@ -109,30 +114,56 @@ class AtheosAPI extends InclusionAPI
         $username = $user->getUsername();
         $password = $user->getPassword();
         $this->createUser($user, $app);
-        if ($user) {
-            // TODO
-        }
         
-        $_POST['username'] = $username;
-        $_POST['password'] = $password;
-        $_POST['language'] = 'en';
-        $_POST['remember'] = 'on';
-        $_POST['target'] = 'user';
-        $_POST['action'] = 'authenticate';
-        
-        $output = $this->includeFile('controller.php');
-        if ($output) {
-            // TODO
-        }
-        
-        unset($_POST['username']);
-        unset($_POST['password']);
-        unset($_POST['language']);
-        unset($_POST['remember']);
-        unset($_POST['target']);
-        unset($_POST['action']);
+        $this->runController('user', 'authenticate', [
+            'username' => $username,
+            'password' => $password,
+            'language' => 'en',
+            'remember' => 'on'
+        ]);        
         
         return $this;
+    }
+    
+    /**
+     * 
+     * @param AppInterface $app
+     * @return AtheosAPI
+     */
+    protected function switchProject(AppInterface $app) : AtheosAPI
+    {
+        $this->runController('project', 'open', [
+            'projectName' => $app->getName(),
+            'projectPath' => $this->getProjectPath($app)
+        ]);
+        return $this;
+    }
+    
+    /**
+     * 
+     * @param string $target
+     * @param string $action
+     * @param array $postVars
+     * @return array
+     */
+    protected function runController(string $target, string $action, array $postVars = []) : array
+    {
+        $_POST['target'] = $target;
+        $_POST['action'] = $action;
+        foreach ($postVars as $var => $val) {
+            $_POST[$var] = $val;
+        }
+        
+        $output = $this->includeFile('controller.php');
+        $result = JsonDataType::decodeJson($output);
+        
+        unset($_POST['target']);
+        unset($_POST['action']);
+        foreach (array_keys($postVars) as $var) {
+            unset($_POST[$var]);
+        }
+        
+        return $result;
     }
     
     protected function getPathToAtheosData() : string
@@ -207,7 +238,8 @@ class AtheosAPI extends InclusionAPI
             $users[$user->getUsername()] = [
                 "password" => password_hash($user->getPassword(), PASSWORD_DEFAULT),
                 "resetPassword" => false,
-                "activeProject" => null,
+                "activeProject" => $this->getProjectPath($activeProject),
+                "activePath" => $this->getProjectPath($activeProject),
                 "creationDate" => DateTimeDataType::now(),
                 "lastLogin" => DateTimeDataType::now(),
                 "permissions" => [
