@@ -49,9 +49,9 @@
     "rows": [
         {
             "CREATED_ON": "2023-01-26 13:15:43",
-            "MODIFIED_ON": "2023-01-26 16:06:37",
+            "MODIFIED_ON": "2023-01-30 11:08:37",
             "CREATED_BY_USER": "0x11e8fe1c902c8ebea23ee4b318306b9a",
-            "MODIFIED_BY_USER": "0x11e8fe1c902c8ebea23ee4b318306b9a",
+            "MODIFIED_BY_USER": "0x31000000000000000000000000000000",
             "UID": "0x11eda567284f5ca4a567025041000001",
             "BEHAVIOR": "exface\/core\/Behaviors\/WidgetModifyingBehavior.php",
             "CONFIG_UXON": {
@@ -72,6 +72,11 @@
                                     "value_left": "=~input!CONNECTOR",
                                     "comparator": "!=",
                                     "value_right": "mssql"
+                                },
+                                {
+                                    "value_left": "=~input!CONNECTOR",
+                                    "comparator": "!=",
+                                    "value_right": "ModelLoaderConnector"
                                 }
                             ]
                         },
