@@ -13,13 +13,13 @@
 trait Database {
 	public static function getKeyStore($table = false, $namespace = "") {
 		$path = DATA . "/" . $namespace . "/";
-		$path = preg_replace('#/+#', '/', $path);
+		$path = preg_replace('#\/+#', '/', $path);
 		$db = new KeyStore($table, $path);
 		return $db;
 	}
 	public static function getObjStore($table = false, $namespace = "") {
 		$path = DATA . "/" . $namespace . "/";
-		$path = preg_replace('#/+#', '/', $path);
+		$path = preg_replace('#\/+#', '/', $path);
 		$db = new ObjStore($table, $path);
 		return $db;
 	}
