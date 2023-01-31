@@ -111,13 +111,11 @@ class AtheosAPI extends InclusionAPI
      */
     protected function logIn(UserInterface $user, AppInterface $app = null) : InclusionAPI
     {
-        $username = $user->getUsername();
-        $password = $user->getPassword();
         $this->createUser($user, $app);
         
         $this->runController('user', 'authenticate', [
-            'username' => $username,
-            'password' => $password,
+            'username' => $user->getUsername(),
+            'password' => $this->getAtheosPassword($user),
             'language' => 'en',
             'remember' => 'on'
         ]);        
@@ -210,6 +208,11 @@ class AtheosAPI extends InclusionAPI
         return FilePathDataType::normalize($app->getDirectoryAbsolutePath(), '/');
     }
     
+    protected function getAtheosPassword(UserInterface $user) : string
+    {
+        return $user->getPassword() ? $user->getPassword() : $user->getUid();
+    }
+    
     protected function createUser(UserInterface $user, AppInterface $activeProject) : AtheosAPI
     {
         $dataPath = $this->getPathToAtheosData();
@@ -221,7 +224,7 @@ class AtheosAPI extends InclusionAPI
         $userData = $users[$user->getUsername()] ?? null;
         if ($userData === null) {
             $users[$user->getUsername()] = [
-                "password" => password_hash($user->getPassword(), PASSWORD_DEFAULT),
+                "password" => password_hash($this->getAtheosPassword($user), PASSWORD_DEFAULT),
                 "resetPassword" => false,
                 "activeProject" => $this->getProjectPath($activeProject),
                 "activePath" => $this->getProjectPath($activeProject),
@@ -236,7 +239,7 @@ class AtheosAPI extends InclusionAPI
             ];
         } else {
             $users[$user->getUsername()] = [
-                "password" => password_hash($user->getPassword(), PASSWORD_DEFAULT),
+                "password" => password_hash($this->getAtheosPassword($user), PASSWORD_DEFAULT),
                 "resetPassword" => false,
                 "activeProject" => $this->getProjectPath($activeProject),
                 "activePath" => $this->getProjectPath($activeProject),
