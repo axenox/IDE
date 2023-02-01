@@ -65,33 +65,41 @@ class IDEFacade extends AbstractHttpFacade
      */
     protected function getAdminerAuth(array $connectionConfig, string $connectorClass) : ?array
     {
+        $auth = null;
         switch (true) {
+            // MySQL, MariaDB
+            case stripos($connectorClass, 'mariadb') !== false:
             case stripos($connectorClass, 'mysql') !== false:
                 $password = $connectionConfig['password'];
                 if ($password === '' || $password === null) {
                     $password = '12345678';
                 }
-                return [
+                $auth = [
                     'server' => $connectionConfig['host'],
                     'username' => $connectionConfig['user'],
                     'password' => $password,
                     'driver' => $this->getAdminerDriver($connectorClass),
                     'db'    => $connectionConfig['dbase']
-                ]; 
+                ];
+                break;
+            // Microsoft SQL Server
             case stripos($connectorClass, 'mssql') !== false:
                 $password = $connectionConfig['PWD'] ?? $connectionConfig['password'];
                 if ($password === '' || $password === null) {
                     $password = '12345678';
                 }
-                return [
+                $auth = [
                     'server' => $connectionConfig['serverName'] ?? $connectionConfig['host'],
                     'username' => $connectionConfig['UID'] ?? $connectionConfig['user'],
                     'password' => $password,
                     'driver' => $this->getAdminerDriver($connectorClass),
                     'db'    => $connectionConfig['database'] ?? $connectionConfig['dbase']
-                ]; 
+                ];
+                if (array_key_exists('connection_options', $connectionConfig)) {
+                    $auth['server'] .= ';Options=' . json_encode($connectionConfig['connection_options']);
+                }
         }
-        return null;
+        return $auth;
     }
     
     /**
