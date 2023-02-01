@@ -35,6 +35,8 @@ if (isset($_GET["mssql_mod"])) {
 			function connect($server, $username, $password) {
 				global $adminer;
 				$db = $adminer->database();
+				// Escape closing curly braces in MS SQL password by a second brace
+				$password = preg_replace('/([^}])}([^}])/', '\\1}}\\2', $password);
 				$connection_info = array("UID" => $username, "PWD" => $password, "CharacterSet" => "UTF-8");
 				if ($db != "") {
 					$connection_info["Database"] = $db;
