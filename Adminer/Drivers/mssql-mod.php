@@ -35,9 +35,22 @@ if (isset($_GET["mssql_mod"])) {
 			function connect($server, $username, $password) {
 				global $adminer;
 				$db = $adminer->database();
-				// Escape closing curly braces in MS SQL password by a second brace
-				$password = preg_replace('/([^}])}([^}])/', '\\1}}\\2', $password);
-				$connection_info = array("UID" => $username, "PWD" => $password, "CharacterSet" => "UTF-8");
+				if (false !== ($semicPos = mb_stripos($server, ';')) && false !== ($optionsPos = mb_stripos($server, 'Options={'))) {
+				    $connection_info = json_decode(mb_substr($server, ($optionsPos + strlen('Options='))), true);
+				    $server = mb_substr($server, 0, $semicPos);
+				} else {
+				    $connection_info = [];
+				}
+				if (! array_key_exists("CharacterSet", $connection_info)) {
+				    $connection_info["CharacterSet"] = "UTF-8";
+				}
+				if ($username !== '' && $username !== null) {
+				    $connection_info['UID'] = $username;
+				}
+				if ($password !== '' && $password !== null) {
+				    // Escape closing curly braces in MS SQL password by a second brace
+				    $connection_info['PWD'] = preg_replace('/([^}])}([^}])/', '\\1}}\\2', $password);;
+				}
 				if ($db != "") {
 					$connection_info["Database"] = $db;
 				}
