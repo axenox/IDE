@@ -392,7 +392,7 @@ WHERE o.schema_id = SCHEMA_ID(" . q(get_schema()) . ") AND o.type IN ('S', 'U', 
 			$type = $row["type"];
 			$length = (preg_match("~char|binary~", $type) ? $row["max_length"] : ($type == "decimal" ? "$row[precision],$row[scale]" : ""));
 			// nvarchar seems to return twice the length, that was specified on creation.
-			if (($type === 'nvarchar' || $type === 'nchar') && is_numeric($length)) {
+			if (($type === 'nvarchar' || $type === 'nchar' || $type === 'ntext') && is_numeric($length)) {
 			    if ($length === -1) {
 			        $length = 'max';
 			    } else {
