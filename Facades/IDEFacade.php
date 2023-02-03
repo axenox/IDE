@@ -8,12 +8,10 @@ use GuzzleHttp\Psr7\Response;
 use exface\Core\DataTypes\StringDataType;
 use exface\Core\Factories\DataSheetFactory;
 use exface\Core\DataTypes\ComparatorDataType;
-use exface\Core\CommonLogic\UxonObject;
 use axenox\IDE\Common\AtheosAPI;
 use exface\Core\DataTypes\JsonDataType;
 use exface\Core\DataTypes\FilePathDataType;
 use exface\Core\Exceptions\UnexpectedValueException;
-use exface\Core\Factories\DataConnectionFactory;
 use exface\Core\CommonLogic\Selectors\DataConnectionSelector;
 
 /**
