@@ -29,6 +29,7 @@ class AtheosAPI extends InclusionAPI
         $path = $request->getUri()->getPath();
         $innerPath = StringDataType::substringAfter($path, $this->getBaseUrlPath(), '');
         $appSelector = StringDataType::substringBefore($innerPath, '/');
+        $app = null;
         $file = substr($innerPath, strlen($appSelector)+1);
         if ($file === '') {
             $file = 'index.php';
@@ -46,11 +47,13 @@ class AtheosAPI extends InclusionAPI
                 $this->switchSession();
                 $user = $this->getWorkbench()->getSecurity()->getAuthenticatedUser();
                 if (! $this->isLoggedIn($user) || ! file_exists($this->getPathToAtheosData() . 'users.json')) {
+                    $app = $app ?? AppFactory::createFromAnything($appSelector, $this->getWorkbench());
                     $this->logIn($user, $app);
                 }
                 
                 $vendorFolder = str_replace(AliasSelectorInterface::ALIAS_NAMESPACE_DELIMITER, '/', $appSelector);
                 if (! StringDataType::endsWith($_SESSION['projectPath'], $vendorFolder, false)) {
+                    $app = $app ?? AppFactory::createFromAnything($appSelector, $this->getWorkbench());
                     $this->switchProject($app);
                 }
                 $output = $this->includeFile($file);

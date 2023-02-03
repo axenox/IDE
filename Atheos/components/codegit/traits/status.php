@@ -42,6 +42,7 @@ trait Status {
 		$result = $this->execute("git diff --numstat " . $filename);
 
 		if (!$result) Common::send("error", i18n("codegit_error_statusFail"));
+		return;
 
 		if (count($result) > 0 && $result[0] !== "") {
 			$stats = explode("\t", $result[0]);
