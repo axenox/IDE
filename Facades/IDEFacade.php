@@ -188,7 +188,11 @@ class IDEFacade extends AbstractHttpFacade
                             throw new UnexpectedValueException('Data connection "' . $selector . '" not found!');
                         }
                         
-                        $config = JsonDataType::decodeJson($row['CONFIG']);
+                        if ($row['CONFIG'] ?? null) {
+                            $config = JsonDataType::decodeJson($row['CONFIG']);
+                        } else {
+                            $config = [];
+                        }
                         $connector = $row['CONNECTOR'];
                     }
                     
