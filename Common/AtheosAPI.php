@@ -14,6 +14,7 @@ use exface\Core\Interfaces\AppInterface;
 use exface\Core\Factories\AppFactory;
 use exface\Core\CommonLogic\Filemanager;
 use exface\Core\Interfaces\Selectors\AliasSelectorInterface;
+use exface\Core\Exceptions\RuntimeException;
 
 class AtheosAPI extends InclusionAPI
 {
@@ -38,6 +39,10 @@ class AtheosAPI extends InclusionAPI
         }
         $base = $this->getBaseFilePath();
         chdir($base);
+        if (mb_stripos($file, '..')) {
+            $this->getWorkbench()->getLogger()->logException(new RuntimeException('Suspicious request to Atheos API blocked: ' . $file));
+            return new Response(404);
+        }
         if (file_exists($base . $file)) {
             $headers = [];
             if (strcasecmp(FilePathDataType::findExtension($file), 'php') === 0) {
@@ -56,9 +61,21 @@ class AtheosAPI extends InclusionAPI
                     $app = $app ?? AppFactory::createFromAnything($appSelector, $this->getWorkbench());
                     $this->switchProject($app);
                 }
-                $output = $this->includeFile($file);
+                
+                try {
+                    $output = trim($this->includeFile($file));
+                } catch (\Throwable $e) {
+                    $this->restoreSession();
+                    throw $e;
+                }
                 
                 $this->restoreSession();
+                
+                $headers = headers_list();
+                if (stripos($file, 'controller') !== false && (mb_substr($output, 0, 1) === '[' || mb_substr($output, 0, 1) === '{')) {
+                    $headers['Content-Type'] = 'application/json';
+                }
+                
             } else {
                 $output = fopen($base . $file, 'r');
                 switch (FilePathDataType::findExtension($file)) {
@@ -76,6 +93,9 @@ class AtheosAPI extends InclusionAPI
             }
             return new Response(200, $headers, $output);
         }
+        
+        $this->getWorkbench()->getLogger()->logException(new RuntimeException('Suspicious request to Atheos API blocked: ' . $file));
+        return new Response(404);
     }
     
     /**
@@ -90,10 +110,14 @@ class AtheosAPI extends InclusionAPI
         global $libraries; 
         global $plugins;
         
-        ob_start();
-        require $pathRelativeToBase;
-        $output = ob_get_contents();
-        ob_end_clean();
+        try {
+            ob_start();
+            require $pathRelativeToBase;
+            $output = ob_get_contents();
+            ob_end_clean();
+        } catch (\Throwable $e) {
+            throw new RuntimeException('Error in Atheos IDE: ' . $e->getMessage(), null, $e);
+        }
         return $output;
     }
     
@@ -156,7 +180,18 @@ class AtheosAPI extends InclusionAPI
         }
         
         $output = $this->includeFile('controller.php');
-        $result = JsonDataType::decodeJson($output);
+        if ($output) {
+            try {
+                $result = JsonDataType::decodeJson($output);
+            } catch (\Throwable $e) {
+                throw new RuntimeException('Error in Atheos IDE: ' . $e->getMessage(), null, $e);
+            }
+            if ($result['status'] === 'error') {
+                throw new RuntimeException('Error in Atheos IDE: ' . $result['text'] . '. Response: ' . JsonDataType::encodeJson($result));
+            }
+        } else {
+            $result = [];
+        }
         
         unset($_POST['target']);
         unset($_POST['action']);
@@ -178,8 +213,26 @@ class AtheosAPI extends InclusionAPI
     
     protected function getAtheosUsers() : array
     {
+        return $this->getAtheosData('users.json');
+    }
+    
+    protected function getAtheosProjects() : array
+    {
+        return $this->getAtheosData('projects.db.json');
+    }
+    
+    protected function getAtheosData(string $filename) : array
+    {
         $dataPath = $this->getPathToAtheosData();
-        return JsonDataType::decodeJson(file_get_contents($dataPath . 'users.json'));
+        $filenamePath = $dataPath . $filename;
+        if (! file_exists($filenamePath)) {
+            return [];
+        }
+        $json = file_get_contents($filenamePath);
+        if (! $json) {
+            return [];
+        }
+        return JsonDataType::decodeJson($json);
     }
     
     protected function setAtheosUsers(array $userData) : array
@@ -191,13 +244,10 @@ class AtheosAPI extends InclusionAPI
     protected function createProject(AppInterface $app) : AtheosAPI
     {
         $dataDir = $this->getPathToAtheosData();
-        if (file_exists($dataDir . 'projects.db.json')) {
-            $projects = JsonDataType::decodeJson(file_get_contents($dataDir . 'projects.db.json'));
-        } else {
-            $projects = [];
-        }
+        $projects = $this->getAtheosProjects();
         $appPath = $this->getProjectPath($app);
         foreach ($projects as $name => $projectPath) {
+            // TODO rename project if names do not match
             if ($projectPath === $appPath) {
                 return $this;
             }
@@ -219,11 +269,7 @@ class AtheosAPI extends InclusionAPI
     protected function createUser(UserInterface $user, AppInterface $activeProject) : AtheosAPI
     {
         $dataPath = $this->getPathToAtheosData();
-        if (file_exists($dataPath . 'users.json')) {
-            $users = JsonDataType::decodeJson(file_get_contents($dataPath . 'users.json'));
-        } else {
-            $users = [];
-        }
+        $users = $this->getAtheosUsers();
         $userData = $users[$user->getUsername()] ?? null;
         if ($userData === null) {
             $users[$user->getUsername()] = [
@@ -261,7 +307,8 @@ class AtheosAPI extends InclusionAPI
         
         $codeGitFile = $dataPath . $user->getUsername() . DIRECTORY_SEPARATOR . 'codegit.db.json';
         if (file_exists($codeGitFile)) {
-            $codeGitData = JsonDataType::decodeJson(file_get_contents($codeGitFile));
+            $codeGitJson = file_get_contents($codeGitFile);
+            $codeGitData = JsonDataType::decodeJson($codeGitJson ? $codeGitJson : '[]');
         } else {
             Filemanager::pathConstruct($dataPath . $user->getUsername());
             $codeGitData = [
