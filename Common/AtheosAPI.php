@@ -238,7 +238,7 @@ class AtheosAPI extends InclusionAPI
     protected function setAtheosUsers(array $userData) : array
     {
         $dataPath = $this->getPathToAtheosData();
-        return file_put_contents($dataPath . 'users.json', JsonDataType::encodeJson($userData));
+        return Filemanager::dumpFile($dataPath . 'users.json', JsonDataType::encodeJson($userData));
     }
     
     protected function createProject(AppInterface $app) : AtheosAPI
@@ -253,7 +253,7 @@ class AtheosAPI extends InclusionAPI
             }
         }
         $projects[$app->getName()] = $appPath;
-        file_put_contents($dataDir . 'projects.db.json', JsonDataType::encodeJson($projects, true));
+        Filemanager::dumpFile($dataDir . 'projects.db.json', JsonDataType::encodeJson($projects, true));
         return $this;
     }
     
@@ -303,7 +303,7 @@ class AtheosAPI extends InclusionAPI
             ];
         }
         
-        file_put_contents($dataPath . 'users.json', JsonDataType::encodeJson($users, true));
+        $this->setAtheosUsers($users);
         
         $codeGitFile = $dataPath . $user->getUsername() . DIRECTORY_SEPARATOR . 'codegit.db.json';
         if (file_exists($codeGitFile)) {
@@ -320,7 +320,7 @@ class AtheosAPI extends InclusionAPI
                 ]
             ];
         }
-        file_put_contents($codeGitFile, JsonDataType::encodeJson($codeGitData, true));
+        Filemanager::dumpFile($codeGitFile, JsonDataType::encodeJson($codeGitData, true));
         return $this;
     }
 }
