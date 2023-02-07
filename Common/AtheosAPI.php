@@ -238,7 +238,7 @@ class AtheosAPI extends InclusionAPI
     protected function setAtheosUsers(array $userData) : array
     {
         $dataPath = $this->getPathToAtheosData();
-        return Filemanager::dumpFile($dataPath . 'users.json', JsonDataType::encodeJson($userData));
+        return $this->getWorkbench()->filemanager()->dumpFile($dataPath . 'users.json', JsonDataType::encodeJson($userData));
     }
     
     protected function createProject(AppInterface $app) : AtheosAPI
@@ -253,7 +253,7 @@ class AtheosAPI extends InclusionAPI
             }
         }
         $projects[$app->getName()] = $appPath;
-        Filemanager::dumpFile($dataDir . 'projects.db.json', JsonDataType::encodeJson($projects, true));
+        $this->getWorkbench()->filemanager()->dumpFile($dataDir . 'projects.db.json', JsonDataType::encodeJson($projects, true));
         return $this;
     }
     
@@ -320,7 +320,7 @@ class AtheosAPI extends InclusionAPI
                 ]
             ];
         }
-        Filemanager::dumpFile($codeGitFile, JsonDataType::encodeJson($codeGitData, true));
+        $this->getWorkbench()->filemanager()->dumpFile($codeGitFile, JsonDataType::encodeJson($codeGitData, true));
         return $this;
     }
 }
