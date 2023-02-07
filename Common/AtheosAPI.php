@@ -49,8 +49,8 @@ class AtheosAPI extends InclusionAPI
                 if (! file_exists($this->getPathToAtheosData())) {
                     Filemanager::pathConstruct($this->getPathToAtheosData());
                 }
-                $this->switchSession();
                 $user = $this->getWorkbench()->getSecurity()->getAuthenticatedUser();
+                $this->switchSession($user);
                 if (! $this->isLoggedIn($user) || ! file_exists($this->getPathToAtheosData() . 'users.json')) {
                     $app = $app ?? AppFactory::createFromAnything($appSelector, $this->getWorkbench());
                     $this->logIn($user, $app);
@@ -235,10 +235,11 @@ class AtheosAPI extends InclusionAPI
         return JsonDataType::decodeJson($json);
     }
     
-    protected function setAtheosUsers(array $userData) : array
+    protected function setAtheosUsers(array $userData) : AtheosAPI
     {
         $dataPath = $this->getPathToAtheosData();
-        return $this->getWorkbench()->filemanager()->dumpFile($dataPath . 'users.json', JsonDataType::encodeJson($userData));
+        $this->getWorkbench()->filemanager()->dumpFile($dataPath . 'users.json', JsonDataType::encodeJson($userData, true));
+        return $this;
     }
     
     protected function createProject(AppInterface $app) : AtheosAPI
