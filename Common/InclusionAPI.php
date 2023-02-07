@@ -5,8 +5,6 @@ use exface\Core\Interfaces\WorkbenchInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
-use exface\Core\DataTypes\StringDataType;
-use exface\Core\DataTypes\FilePathDataType;
 use GuzzleHttp\Psr7\Response;
 use exface\Core\Interfaces\WorkbenchDependantInterface;
 use exface\Core\Interfaces\UserInterface;
@@ -33,28 +31,41 @@ class InclusionAPI implements RequestHandlerInterface, WorkbenchDependantInterfa
         $this->mainFile = $mainFile;
     }
     
-    protected function switchSession() : InclusionAPI
+    protected function switchSession(UserInterface $user) : InclusionAPI
     {
         $this->sessionIdOuter = session_id();
         $this->sessionNameOuter = session_name();
         session_write_close();
         session_name($this->getSessionName());
-        session_id($this->getSessionId());
+        session_id($this->getSessionId($user));
         session_start();
         session_write_close();
         return $this;
     }
     
-    protected function getSessionId() : string
+    /**
+     * 
+     * @param UserInterface $user
+     * @return string
+     */
+    protected function getSessionId(UserInterface $user) : string
     {
-        return 'mijnintvksngnkbff8cbnsg0ui';
+        return md5($user->getUid());
     }
     
+    /**
+     * 
+     * @return string
+     */
     protected function getSessionName() : string
     {
         return md5(substr($this->baseFilePath, 0, -1));
     }
     
+    /**
+     * 
+     * @return InclusionAPI
+     */
     protected function restoreSession() : InclusionAPI
     {
         session_write_close();
@@ -63,27 +74,49 @@ class InclusionAPI implements RequestHandlerInterface, WorkbenchDependantInterfa
         return $this;
     }
     
+    /**
+     * 
+     * {@inheritDoc}
+     * @see \Psr\Http\Server\RequestHandlerInterface::handle()
+     */
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         // TODO
         return new Response(403);
     }
     
+    /**
+     * 
+     * @return string
+     */
     protected function getBaseFilePath() : string
     {
         return $this->baseFilePath;
     }
-    
+
+    /**
+     * 
+     * @return string
+     */
     protected function getBaseUrlPath() : string
     {
         return $this->baseUrlPath;
     }
     
+    /**
+     * 
+     * @return string
+     */
     protected function getMainFilePath() : string
     {
         return $this->mainFile;
     }
     
+    /**
+     * 
+     * @param string $pathRelativeToBase
+     * @return string
+     */
     protected function includeFile(string $pathRelativeToBase) : string
     {
         ob_start();
@@ -93,20 +126,34 @@ class InclusionAPI implements RequestHandlerInterface, WorkbenchDependantInterfa
         return $output;
     }
     
+    /**
+     * 
+     * @param UserInterface $user
+     * @return bool
+     */
     protected function isLoggedIn(UserInterface $user) : bool
     {
         return false;
     }
     
+    /**
+     * 
+     * @param UserInterface $user
+     * @return InclusionAPI
+     */
     protected function logIn(UserInterface $user) : InclusionAPI
     {
         
         return $this;
     }
     
+    /**
+     * 
+     * {@inheritDoc}
+     * @see \exface\Core\Interfaces\WorkbenchDependantInterface::getWorkbench()
+     */
     public function getWorkbench()
     {
         return $this->workbench;
     }
-
 }
