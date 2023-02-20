@@ -69,10 +69,10 @@
 				if (target.tagName === 'BUTTON') {
 					if (target.text() === 'Diff') {
 						self.showPanel('diff', self.activeRepo, {
-							files: [target.parent('[data-file]').attr('data-file')]
+							files: [target.parent('tr').attr('data-file')]
 						});
 					} else if (target.text() === 'Undo') {
-						self.undo(self.activeRepo, target.parent('[data-file]').attr('data-file'));
+						self.undo(self.activeRepo, target.parent('tr').attr('data-file'));
 					}
 				}
 			});
@@ -379,7 +379,6 @@
 					},
 					success: function(reply) {
 						toast(reply);
-						self.showPanel('overview', self.activeRepo);
 					}
 				});
 			};

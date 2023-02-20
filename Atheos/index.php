@@ -116,7 +116,7 @@ $SourceManager = new SourceManager;
 		$SourceManager->linkResource("js", "plugins", DEVELOPMENT);
 
 	} else {
-		$path = DATA . "/";
+		$path = __DIR__ . "/data/";
 
 		$users = file_exists($path . "users.json");
 		$projects = file_exists($path . "projects.json");

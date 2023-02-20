@@ -31,8 +31,6 @@ trait Reply {
 		$data["status"] = $status;
 
 		// Return
-		// MOD Workbench integration
-		// exit(json_encode($data));
-		echo json_encode($data);
+		exit(json_encode($data));
 	}
 }
