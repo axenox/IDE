@@ -17,13 +17,13 @@ trait History {
 
 		$pivot = array();
 		foreach ($result as $i => $item) {
-			$item = explode('|', $item);
+			$item = explode('\\|', $item);
 			$pivot[] = array(
-			    "hash" => $item[0] ?? '',
-				"author" => $item[1] ?? '',
-			    "email" => $item[2] ?? '',
-			    "date" => $item[3] ?? '',
-			    "message" => $item[4] ?? ''
+				"hash" => $item[0],
+				"author" => $item[1],
+				"email" => $item[2],
+				"date" => $item[3],
+				"message" => $item[4]
 			);
 		}
 
@@ -46,10 +46,7 @@ trait History {
 			$result = $this->untrackedDiff($path);
 
 		} else if (in_array($path, $status['modified'])) {
-		    // BOF MOD increase diff scope
-		    // FIX add a config parameter for the number of lines in diff scope and create a pull request
-			$result = $this->execute('git diff -U20 ' . $path);
-			// EOF MOD increase diff scopr
+			$result = $this->execute('git diff ' . $path);
 			$result[] = "\n";
 
 		} else if (in_array($path, $status['added'])) {

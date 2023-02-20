@@ -15,19 +15,18 @@ $path = POST("path");
 function return_bytes($val) {
 	$val = trim($val);
 	$last = strtolower($val[strlen($val)-1]);
-	$num = intval($val);
 	switch ($last) {
 		case 'g':
-			$num *= 1024;
+			$val *= 1024;
 			break;
 		case 'm':
-		    $num *= 1024;
+			$val *= 1024;
 			break;
 		case 'k':
-		    $num *= 1024;
+			$val *= 1024;
 			break;
 	}
-	return $num;
+	return $val;
 }
 
 function max_file_upload_in_bytes() {
@@ -56,7 +55,7 @@ switch ($action) {
 			<pre><?php echo($path); ?></pre>
 			<label id="upload_wrapper">
 				<?php echo i18n("dragFilesOrClickHereToUpload"); ?>
-				<input type="hidden" name="MAX_FILE_SIZE" value="<?php echo max_file_upload_in_bytes(); ?>">
+				<input type=“hidden” name=“MAX_FILE_SIZE” value=“<?php echo max_file_upload_in_bytes(); ?>”>
 				<input class="hidden" type="file" name="upload[]" multiple>
 			</label>
 			<div id="progress_wrapper">
