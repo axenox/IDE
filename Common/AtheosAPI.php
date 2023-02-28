@@ -74,6 +74,11 @@ class AtheosAPI extends InclusionAPI
                 $headers = headers_list();
                 if (stripos($file, 'controller') !== false && (mb_substr($output, 0, 1) === '[' || mb_substr($output, 0, 1) === '{')) {
                     $headers['Content-Type'] = 'application/json';
+                    // There are cases, when Atheos prints multiple JSON objects - see MOD in `Atheos/traits/reply.php`
+                    // Need to check if this is the case and just leave the first one.
+                    if (false !== ($pos = strpos($output, '}{')) && json_decode($output) === null) {
+                        $output = mb_substr($output, 0, $pos+1);
+                    }
                 }
                 
             } else {
