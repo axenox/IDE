@@ -9,10 +9,12 @@ trait History {
 		if ($path) {
 			$cmd .= " -- " . $path;
 		}
-
+		
 		$result = $this->execute($cmd);
-		if (!$result) {
-			return "Error loading log";
+		if ($result["code"] === 0) {
+		    $result = $result["text"];
+		} else {
+		    return "Error loading log";
 		}
 
 		$pivot = array();
@@ -34,11 +36,8 @@ trait History {
 
 		$result = $this->execute("git status --branch --porcelain");
 
-		if ($result) {
-			$status = $this->parseChanges($result);
-		} else {
-			return false;
-		}
+		if ($result["code"] !== 0) return false;
+		$status = $this->parseChanges($result["text"]);
 
 		$result = array();
 
@@ -48,16 +47,18 @@ trait History {
 		} else if (in_array($path, $status['modified'])) {
 		    // BOF MOD increase diff scope
 		    // FIX add a config parameter for the number of lines in diff scope and create a pull request
-			$result = $this->execute('git diff -U20 ' . $path);
+            $scope = '-U20 ';
+			$result = $this->execute('git diff ' . $scope . $path)["text"];
 			// EOF MOD increase diff scopr
+
 			$result[] = "\n";
 
 		} else if (in_array($path, $status['added'])) {
-			$result = $this->execute('git diff --cached ' . $path);
+			$result = $this->execute('git diff --cached ' . $path)["text"];
 			$result[] = "\n";
 
 		} else if (in_array($path, $status['deleted'])) {
-			$result = $this->execute('git diff -- ' . $path);
+			$result = $this->execute('git diff -- ' . $path)["text"];
 			$result[] = "\n";
 
 		} else {
