@@ -9,7 +9,10 @@
 // Copyright (c) 2013 Codiad & Kent Safranski
 // Source: https://github.com/Fluidbyte/Codiad-Terminal
 //////////////////////////////////////////////////////////////////////////////80
-require_once("../../common.php");
+
+// MOD exface
+// require_once("../../common.php");
+require_once("common.php");
 
 //////////////////////////////////////////////////////////////////////////////80
 // Verify Session or Key
@@ -25,7 +28,9 @@ define("PASSWORD", "terminal");
 define("ROOT", Common::getWorkspacePath($project));
 define("BLOCKED", "ssh,telnet");
 // define("ENABLED", "java,ls,cd,echo,javac");
-define("ENABLED", false);
+// MOD exface
+// define("ENABLED", false);
+define("ENABLED", "action,ls,dir,git");
 
 //////////////////////////////////////////////////////////////////////////////80
 // Terminal Class
@@ -64,7 +69,7 @@ class Terminal {
 	//////////////////////////////////////////////////////////////////////////80
 	public function parseCommand($str) {
 
-		// Explode command
+	    // Explode command
 		$command_parts = explode(" ", $str);
 
 		// Handle "cd" command
@@ -82,7 +87,22 @@ class Terminal {
 		// Replace text editors with cat
 		$editors = array("vim", "vi", "nano");
 		$str = preg_replace("/^(".join("|", $editors).")/", "cat", trim($str));
-
+		
+		// BOF MOD exface
+		if ($command_parts[0] === 'action') {
+		    $str = '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . $str;
+		}
+		
+		$str = trim($str);
+		foreach ([' & ', '&&', '||', ' OR ', ' AND ', ';'] as $evilTag) {
+		    if (strpos($str, $evilTag) !== false) {
+		        return "echo ERROR: Command not allowed 2>&1";
+		    }
+		}
+		if (mb_substr($str, 0, 1) === '{' || mb_substr($str, 0, 1) === '(') {
+		    return "echo ERROR: Command not allowed 2>&1";
+		}
+		// EOF MOD exface
 
 		if (ENABLED) {
 			// Handle enabled commands

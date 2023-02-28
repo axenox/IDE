@@ -62,6 +62,10 @@ class AtheosAPI extends InclusionAPI
                     $this->switchProject($app);
                 }
                 
+                if (! $_SESSION["term_auth"]) {
+                    $_SESSION["term_auth"] = true;
+                }
+                
                 try {
                     $output = trim($this->includeFile($file));
                 } catch (\Throwable $e) {
