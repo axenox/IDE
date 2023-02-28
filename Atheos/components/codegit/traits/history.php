@@ -90,7 +90,13 @@ trait History {
 				}
 			}
 		} else {
-			$temp = $this->execute('cat ' . $path)["data"];
+			$temp = $this->execute('more ' . $path);
+			if ($temp['code'] === 0) {
+			    $temp = $temp['text'];
+			} else {
+			    Common::send("error", implode("\n", $temp["text"] ?? []));
+			    $temp = [];
+			}
 			array_push($result, "diff --git a/". $path . " b/" . $path);
 			foreach ($temp as $i => $line) {
 				array_push($result, "+" . $line);
@@ -103,15 +109,21 @@ trait History {
 
 	public function loadBlame($repo, $path) {
 		$result = $this->execute("git blame -c --date=format:'%b %d, %Y %H:%M' " . $path);
+		if ($result["code"] === 0) {
+		    $result = $result["text"];
+		} else {
+		    Common::send("error", implode("\n", $result["text"] ?? []));
+		    $result = [];
+		}
 		return $result;
 	}
 
 	public function checkout($repo, $file) {
 		$result = $this->execute("git checkout -- " . $file);
-		if ($result) {
+		if ($result["code"] === 0) {
 			Common::send("success", i18n("git_undo_success"));
 		} else {
-			Common::send("error", i18n("git_undo_failed"));
+		    Common::send("error", i18n("git_undo_failed") . "\n\n" . implode("\n", $result["text"] ?? []));
 		}
 	}
 }
