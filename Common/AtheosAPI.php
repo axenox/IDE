@@ -50,6 +50,16 @@ class AtheosAPI extends InclusionAPI
                     Filemanager::pathConstruct($this->getPathToAtheosData());
                 }
                 $user = $this->getWorkbench()->getSecurity()->getAuthenticatedUser();
+                
+                // Block certain actions
+                switch (mb_strtolower($_POST['target'] ?? '')) {
+                    case 'user':
+                        if ($_POST['action'] !== 'keepAlive') {
+                            return new Response(200);
+                        }
+                        break;
+                }
+                
                 $this->switchSession($user);
                 if (! $this->isLoggedIn($user) || ! file_exists($this->getPathToAtheosData() . 'users.json')) {
                     $app = $app ?? AppFactory::createFromAnything($appSelector, $this->getWorkbench());
