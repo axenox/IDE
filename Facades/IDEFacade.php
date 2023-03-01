@@ -161,7 +161,7 @@ class IDEFacade extends AbstractHttpFacade
         $base = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'Adminer' . DIRECTORY_SEPARATOR;
         switch (true) {
             
-            case !file_exists($base . $selector):   
+            case ! file_exists($base . $selector):   
                 if (isset($_POST['logout'])) {
                     $_GET = [];
                     $_POST = [];
@@ -205,7 +205,9 @@ class IDEFacade extends AbstractHttpFacade
                 // How to prevent sending headers??? Override header() function somehow?
                 // remove Adminer denial of integration into iBrowser
                 // header_remove('X-Frame-Options');
-                return new Response(200, [], $html);
+                $headers = headers_list();
+                $headers['X-Frame-Options'] = 'SAMEORIGIN';
+                return new Response(200, $headers, $html);
             
                 
             // read different files    
@@ -218,11 +220,15 @@ class IDEFacade extends AbstractHttpFacade
                         $mimeType = 'text/css';
                         break;
                         // read different file
+                    case 'js':
+                        $mimeType = 'text/javascript';
+                        break;
+                        // read different file
                     Default:
                         $mimeType = mime_content_type($base.$file);
                         break;
                 }
-                return new Response(200, ['content-type' => $mimeType], $stream);
+                return new Response(200, ['Content-Type' => $mimeType], $stream);
         }
     }
     

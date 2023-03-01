@@ -63,7 +63,7 @@ sessionStorage && document.addEventListener('DOMContentLoaded', function () {
 	sessionStorage.setItem('adminer_tables_filter_db', db);
 });
 </script>
-<p class="jsonly"><input id="filter-field" autocomplete="off"><?php echo script("qs('#filter-field').oninput = tablesFilterInput;"); ?>
+<input id="filter-field" autocomplete="off" class="jsonly"><?php echo script("qs('#dbs').appendChild(qs('#filter-field')); qs('#filter-field').oninput = tablesFilterInput;"); ?>
 <?php
 	}
 }
