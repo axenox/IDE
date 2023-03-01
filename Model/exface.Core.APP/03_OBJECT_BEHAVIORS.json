@@ -44,12 +44,20 @@
         {
             "name": "DESCRIPTION",
             "attribute_alias": "DESCRIPTION"
+        },
+        {
+            "name": "DISABLED_FLAG",
+            "attribute_alias": "DISABLED_FLAG"
+        },
+        {
+            "name": "PRIORITY",
+            "attribute_alias": "PRIORITY"
         }
     ],
     "rows": [
         {
             "CREATED_ON": "2023-01-30 14:51:12",
-            "MODIFIED_ON": "2023-01-30 14:59:48",
+            "MODIFIED_ON": "2023-03-01 11:08:27",
             "CREATED_BY_USER": "0x31000000000000000000000000000000",
             "MODIFIED_BY_USER": "0x31000000000000000000000000000000",
             "UID": "0x11edb6b228bc82b8b6b2025041000001",
@@ -77,8 +85,45 @@
             },
             "OBJECT": "0x35370000000000000000000000000000",
             "APP": "0x11ed96509743e0c29650025041000001",
-            "NAME": "IDE-button for apps",
-            "DESCRIPTION": ""
+            "NAME": "IDE-button on Apps-page",
+            "DESCRIPTION": "",
+            "DISABLED_FLAG": 0,
+            "PRIORITY": null
+        },
+        {
+            "CREATED_ON": "2023-03-01 11:08:13",
+            "MODIFIED_ON": "2023-03-01 11:08:13",
+            "CREATED_BY_USER": "0x31000000000000000000000000000000",
+            "MODIFIED_BY_USER": "0x31000000000000000000000000000000",
+            "UID": "0x11ed82e4faffe6fe82e4025041000001",
+            "BEHAVIOR": "exface\/Core\/Behaviors\/WidgetModifyingBehavior.php",
+            "CONFIG_UXON": {
+                "page_alias": "exface.core.metamodel",
+                "add_buttons": [
+                    {
+                        "caption": "IDE",
+                        "icon": "code",
+                        "action": {
+                            "alias": "exface.core.ShowDialog",
+                            "maximize": true,
+                            "dialog": {
+                                "widgets": [
+                                    {
+                                        "widget_type": "Browser",
+                                        "value": "=Concatenate('api\/ide\/atheos\/', ALIAS, '\/')"
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                ]
+            },
+            "OBJECT": "0x35370000000000000000000000000000",
+            "APP": "0x11ed96509743e0c29650025041000001",
+            "NAME": "IDE-button on Metamodel-page",
+            "DESCRIPTION": "",
+            "DISABLED_FLAG": 0,
+            "PRIORITY": null
         }
     ],
     "totals_rows": [],
