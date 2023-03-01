@@ -1,7 +1,9 @@
-.links+.jsonly {margin: -140px 16px 0 16px !important}
 #filter-field {width: 100%}
-#dbs > select[name=db] {visibility: hidden;}
+#dbs > select[name=db] {display: none;}
+#dbs > span:first-of-type {display:none;}
 .logout {display: none}
+body {width: 100% !important;}
+.content {width: calc(100% - 454px);}
 
 /*
  * Theme by Pepa Linha [http://webdream.cz]
@@ -275,17 +277,19 @@ p code + a:visited:hover {
 
 #menu #dbs {
 	background: #fff;
-	padding: 0 15px 15px;
+	padding: 0 15px 5px;
 	border: 1px solid #dae8fa;
 	border-bottom: 0;
 	box-sizing: border-box;
 	color: #fff;
 }
 
-#menu #dbs select {
+#menu #dbs select,
+#menu #dbs input {
 	outline: 0;
 	border-color: rgba(0, 0, 0, 0.1);
 	width: 100%;
+	margin-bottom: 10px;
 }
 
 #menu p.links {
@@ -293,7 +297,7 @@ p code + a:visited:hover {
 	border: 1px solid #dae8fa;
 	border-top: 0;
 	text-align: center;
-	display: table;
+	display: block;
 	width: 100%;
 	box-sizing: border-box;
 }
@@ -301,7 +305,7 @@ p code + a:visited:hover {
 #menu p.links a {
 	padding: 8px;
 	margin: 0;
-	display: table-cell;
+	display: inline-block;
 	font-size: 12px;
 }
 
@@ -345,7 +349,7 @@ p code + a:visited:hover {
 	left: 15px;
 	right: 15px;
 	bottom: 0;
-	top: 220px;
+	top: 240px;
 	overflow: hidden !important;
 	overflow-y: auto !important;
 }
