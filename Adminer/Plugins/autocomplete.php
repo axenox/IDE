@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	var keywords = <?php echo json_encode($this->keywords) ?>;
 	var suggests = <?php echo json_encode($suggests) ?>;
 	var textarea = document.querySelector('.sqlarea');
-	var form = document.querySelector('#form'); //textarea.form;
+	var form = textarea.closest('form'); //textarea.form;
 	var editor;
 
 	ace.config.set('basePath', 'Assets/ace');
