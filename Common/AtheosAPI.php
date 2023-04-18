@@ -46,9 +46,7 @@ class AtheosAPI extends InclusionAPI
         if (file_exists($base . $file)) {
             $headers = [];
             if (strcasecmp(FilePathDataType::findExtension($file), 'php') === 0) {
-                if (! file_exists($this->getPathToAtheosData())) {
-                    Filemanager::pathConstruct($this->getPathToAtheosData());
-                }
+                $this->createDataFolders();
                 $user = $this->getWorkbench()->getSecurity()->getAuthenticatedUser();
                 
                 // Block certain actions
@@ -230,6 +228,15 @@ class AtheosAPI extends InclusionAPI
             . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR;
     }
     
+    /**
+     * 
+     * @return string
+     */
+    protected function getPathToAtheosUsers() : string
+    {
+        return $this->getPathToAtheosData() . 'users' . DIRECTORY_SEPARATOR;
+    }
+    
     protected function getAtheosUsers() : array
     {
         return $this->getAtheosData('users.json');
@@ -288,7 +295,6 @@ class AtheosAPI extends InclusionAPI
     
     protected function createUser(UserInterface $user, AppInterface $activeProject) : AtheosAPI
     {
-        $dataPath = $this->getPathToAtheosData();
         $users = $this->getAtheosUsers();
         $userData = $users[$user->getUsername()] ?? null;
         if ($userData === null) {
@@ -325,12 +331,13 @@ class AtheosAPI extends InclusionAPI
         
         $this->setAtheosUsers($users);
         
-        $codeGitFile = $dataPath . $user->getUsername() . DIRECTORY_SEPARATOR . 'codegit.db.json';
+        $usersPath = $this->getPathToAtheosUsers();
+        $codeGitFile = $usersPath . $user->getUsername() . DIRECTORY_SEPARATOR . 'codegit.db.json';
         if (file_exists($codeGitFile)) {
             $codeGitJson = file_get_contents($codeGitFile);
             $codeGitData = JsonDataType::decodeJson($codeGitJson ? $codeGitJson : '[]');
         } else {
-            Filemanager::pathConstruct($dataPath . $user->getUsername());
+            Filemanager::pathConstruct($usersPath . $user->getUsername());
             $codeGitData = [
                 [
                     "user" => $user->getUsername(),
@@ -341,6 +348,17 @@ class AtheosAPI extends InclusionAPI
             ];
         }
         $this->getWorkbench()->filemanager()->dumpFile($codeGitFile, JsonDataType::encodeJson($codeGitData, true));
+        return $this;
+    }
+    
+    protected function createDataFolders() : AtheosAPI
+    {
+        if (! file_exists($this->getPathToAtheosData())) {
+            Filemanager::pathConstruct($this->getPathToAtheosData());
+        }
+        if (! file_exists($this->getPathToAtheosUsers())) {
+            Filemanager::pathConstruct($this->getPathToAtheosUsers());
+        }
         return $this;
     }
 }

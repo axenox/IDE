@@ -3,22 +3,22 @@
 
 trait History {
 
-	public function loadLog($repo, $path) {
+	public function loadLog($path) {
 
 		$cmd = "git log --relative-date --pretty=format:\"%H|%an|%ae|%ar|%s\" -500";
 		if ($path) {
 			$cmd .= " -- " . $path;
 		}
-		
-		$result = $this->execute($cmd);
-		if ($result["code"] === 0) {
-		    $result = $result["text"];
-		} else {
-		    return "Error loading log";
-		}
 
+		$result = $this->execute($cmd);
+		if ($result["code"] !== 0) {
+			return "Error loading log";
+
+		}
+		
 		$pivot = array();
-		foreach ($result as $i => $item) {
+		foreach ($result["text"] as $item) {
+			$item = str_replace ("\\", "", $item);
 			$item = explode('|', $item);
 			$pivot[] = array(
 			    "hash" => $item[0] ?? '',
@@ -28,11 +28,10 @@ trait History {
 			    "message" => $item[4] ?? ''
 			);
 		}
-
 		return $pivot;
 	}
 
-	public function loadDiff($repo, $path) {
+	public function loadDiff($path) {
 
 		$result = $this->execute("git status --branch --porcelain");
 
@@ -90,15 +89,9 @@ trait History {
 				}
 			}
 		} else {
-			$temp = $this->execute('more ' . $path);
-			if ($temp['code'] === 0) {
-			    $temp = $temp['text'];
-			} else {
-			    Common::send("error", implode("\n", $temp["text"] ?? []));
-			    $temp = [];
-			}
+			$temp = $this->execute('cat ' . $path)["text"];
 			array_push($result, "diff --git a/". $path . " b/" . $path);
-			foreach ($temp as $i => $line) {
+			foreach ($temp as $line) {
 				array_push($result, "+" . $line);
 			}
 			array_push($result, "\n");
@@ -107,23 +100,17 @@ trait History {
 	}
 
 
-	public function loadBlame($repo, $path) {
+	public function loadBlame($path) {
 		$result = $this->execute("git blame -c --date=format:'%b %d, %Y %H:%M' " . $path);
-		if ($result["code"] === 0) {
-		    $result = $result["text"];
-		} else {
-		    Common::send("error", implode("\n", $result["text"] ?? []));
-		    $result = [];
-		}
-		return $result;
+		return $result["text"];
 	}
 
-	public function checkout($repo, $file) {
+	public function checkout($file) {
 		$result = $this->execute("git checkout -- " . $file);
 		if ($result["code"] === 0) {
 			Common::send("success", i18n("git_undo_success"));
 		} else {
-		    Common::send("error", i18n("git_undo_failed") . "\n\n" . implode("\n", $result["text"] ?? []));
+			Common::send("error", i18n("git_undo_failed"));
 		}
 	}
 }
