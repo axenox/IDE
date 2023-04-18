@@ -10,7 +10,6 @@ trait Execute {
 		$cmd = str_replace("\(", "(", $cmd);
 		$cmd = str_replace("\)", ")", $cmd);
 		$result = Common::execute($cmd . ' 2>&1');
-		$code = $result["code"];
 
 		$result = $this->parseReturn($result);
 		return $result;
