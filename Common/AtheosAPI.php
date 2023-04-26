@@ -46,76 +46,76 @@ class AtheosAPI extends InclusionAPI
         $base = $this->getBaseFilePath();
         chdir($base);
         
-        if (file_exists($base . $file)) {
-            $headers = [];
-            if (strcasecmp(FilePathDataType::findExtension($file), 'php') === 0) {
-                $this->createDataFolders();
-                $user = $this->getWorkbench()->getSecurity()->getAuthenticatedUser();
-                
-                // Block certain actions
-                switch (mb_strtolower($_POST['target'] ?? '')) {
-                    case 'user':
-                        if ($_POST['action'] !== 'keepAlive') {
-                            return new Response(200);
-                        }
-                        break;
-                }
-                
-                $this->switchSession($user);
-                if (! $this->isLoggedIn($user) || ! file_exists($this->getPathToAtheosData() . 'users.json')) {
-                    $app = $app ?? AppFactory::createFromAnything($appSelector, $this->getWorkbench());
-                    $this->logIn($user, $app);
-                }
-                
-                $vendorFolder = str_replace(AliasSelectorInterface::ALIAS_NAMESPACE_DELIMITER, '/', $appSelector);
-                if (! StringDataType::endsWith($_SESSION['projectPath'], $vendorFolder, false)) {
-                    $app = $app ?? AppFactory::createFromAnything($appSelector, $this->getWorkbench());
-                    $this->switchProject($app);
-                }
-                
-                if (! $_SESSION["term_auth"]) {
-                    $_SESSION["term_auth"] = true;
-                }
-                
-                try {
-                    $output = trim($this->includeFile($file));
-                } catch (\Throwable $e) {
-                    $this->restoreSession();
-                    throw $e;
-                }
-                
-                $this->restoreSession();
-                
-                $headers = headers_list();
-                if (stripos($file, 'controller') !== false && (mb_substr($output, 0, 1) === '[' || mb_substr($output, 0, 1) === '{')) {
-                    $headers['Content-Type'] = 'application/json';
-                    // There are cases, when Atheos prints multiple JSON objects - see MOD in `Atheos/traits/reply.php`
-                    // Need to check if this is the case and just leave the first one.
-                    if (false !== ($pos = strpos($output, '}{')) && json_decode($output) === null) {
-                        $output = mb_substr($output, 0, $pos+1);
-                    }
-                }
-                
-            } else {
-                $output = fopen($base . $file, 'r');
-                switch (FilePathDataType::findExtension($file)) {
-                    case 'css':
-                        $contentType = 'text/css';
-                        break;
-                    case 'js':
-                         $contentType = 'text/javascript';
-                         break;
-                    default:
-                        $contentType = MimeTypeDataType::findMimeTypeOfFile($base . $file);
-                        break;
-                }
-                $headers['Content-Type'] = $contentType;
-            }
-            return new Response(200, $headers, $output);
+        if (! file_exists($base . $file)) {
+            $this->getWorkbench()->getLogger()->logException(new RuntimeException('IDE file not found: ' . $base . $file));
+            return new Response(404);
         }
         
-        $this->getWorkbench()->getLogger()->logException(new RuntimeException('Suspicious request to Atheos API blocked: ' . $file));
-        return new Response(404);
+        $headers = [];
+        if (strcasecmp(FilePathDataType::findExtension($file), 'php') === 0) {
+            $this->createDataFolders();
+            $user = $this->getWorkbench()->getSecurity()->getAuthenticatedUser();
+            
+            // Block certain actions
+            switch (mb_strtolower($_POST['target'] ?? '')) {
+                case 'user':
+                    if ($_POST['action'] !== 'keepAlive') {
+                        return new Response(200);
+                    }
+                    break;
+            }
+            
+            $this->switchSession($user);
+            if (! $this->isLoggedIn($user) || ! file_exists($this->getPathToAtheosData() . 'users.json')) {
+                $app = $app ?? AppFactory::createFromAnything($appSelector, $this->getWorkbench());
+                $this->logIn($user, $app);
+            }
+            
+            $vendorFolder = str_replace(AliasSelectorInterface::ALIAS_NAMESPACE_DELIMITER, '/', $appSelector);
+            if (! StringDataType::endsWith($_SESSION['projectPath'], $vendorFolder, false)) {
+                $app = $app ?? AppFactory::createFromAnything($appSelector, $this->getWorkbench());
+                $this->switchProject($app);
+            }
+            
+            if (! $_SESSION["term_auth"]) {
+                $_SESSION["term_auth"] = true;
+            }
+            
+            try {
+                $output = trim($this->includeFile($file));
+            } catch (\Throwable $e) {
+                $this->restoreSession();
+                throw $e;
+            }
+            
+            $this->restoreSession();
+            
+            $headers = headers_list();
+            if (stripos($file, 'controller') !== false && (mb_substr($output, 0, 1) === '[' || mb_substr($output, 0, 1) === '{')) {
+                $headers['Content-Type'] = 'application/json';
+                // There are cases, when Atheos prints multiple JSON objects - see MOD in `Atheos/traits/reply.php`
+                // Need to check if this is the case and just leave the first one.
+                if (false !== ($pos = strpos($output, '}{')) && json_decode($output) === null) {
+                    $output = mb_substr($output, 0, $pos+1);
+                }
+            }
+            
+        } else {
+            $output = fopen($base . $file, 'r');
+            switch (FilePathDataType::findExtension($file)) {
+                case 'css':
+                    $contentType = 'text/css';
+                    break;
+                case 'js':
+                     $contentType = 'text/javascript';
+                     break;
+                default:
+                    $contentType = MimeTypeDataType::findMimeTypeOfFile($base . $file);
+                    break;
+            }
+            $headers['Content-Type'] = $contentType;
+        }
+        return new Response(200, $headers, $output);
     }
     
     /**
