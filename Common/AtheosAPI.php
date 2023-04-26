@@ -36,13 +36,16 @@ class AtheosAPI extends InclusionAPI
             $file = 'index.php';
             $app = AppFactory::createFromAnything($appSelector, $this->getWorkbench());
             $this->createProject($app);
+        } else {
+            if (mb_stripos($file, '..') !== false) {
+                $this->getWorkbench()->getLogger()->logException(new RuntimeException('Suspicious request to Atheos API blocked: ' . $file));
+                return new Response(404);
+            }
         }
+        
         $base = $this->getBaseFilePath();
         chdir($base);
-        if (mb_stripos($file, '..')) {
-            $this->getWorkbench()->getLogger()->logException(new RuntimeException('Suspicious request to Atheos API blocked: ' . $file));
-            return new Response(404);
-        }
+        
         if (file_exists($base . $file)) {
             $headers = [];
             if (strcasecmp(FilePathDataType::findExtension($file), 'php') === 0) {
