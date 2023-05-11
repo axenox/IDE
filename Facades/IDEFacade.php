@@ -36,6 +36,9 @@ class IDEFacade extends AbstractHttpFacade
                 return $this->runAdminer($pathInFacade);
             case StringDataType::startsWith($pathInFacade, 'atheos/'):
                 $path = $this->getApp()->getDirectoryAbsolutePath() . DIRECTORY_SEPARATOR . 'Atheos';
+                if (! FilePathDataType::isAbsolute($path)) {
+                    $path = '/' . $path;
+                }
                 $api = new AtheosAPI($this->getWorkbench(), 'atheos/', $path, 'index.php');
                 return $api->handle($request);
                 break;  
