@@ -16,7 +16,9 @@
 	        "Apache-2.0",
 	        "GPL-2.0-only"
 	    ],
-        "license_link": "https://www.apache.org/licenses/LICENSE-2.0.html",
+        "license_link": {
+        	"Apache-2.0": "https://www.apache.org/licenses/LICENSE-2.0.html"
+    	},
         "description": "Database management in a single PHP file.",
         "homepage": "https://www.adminer.org/"
     }
