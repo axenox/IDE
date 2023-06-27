@@ -23,12 +23,23 @@ class InclusionAPI implements RequestHandlerInterface, WorkbenchDependantInterfa
     
     private $sessionNameOuter = null;
     
-    public function __construct(WorkbenchInterface $workbench, string $baseUrl, string $baseFilePath, string $mainFile)
+    private $headers = [];
+    
+    /**
+     * 
+     * @param WorkbenchInterface $workbench
+     * @param string $baseUrl
+     * @param string $baseFilePath
+     * @param string $mainFile
+     * @param string[] $commonHeaders
+     */
+    public function __construct(WorkbenchInterface $workbench, string $baseUrl, string $baseFilePath, string $mainFile, array $commonHeaders = [])
     {
         $this->workbench = $workbench;
         $this->baseUrlPath = $baseUrl;
         $this->baseFilePath = ltrim($baseFilePath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
         $this->mainFile = $mainFile;
+        $this->headers = $commonHeaders;
     }
     
     protected function switchSession(UserInterface $user) : InclusionAPI
@@ -82,7 +93,7 @@ class InclusionAPI implements RequestHandlerInterface, WorkbenchDependantInterfa
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         // TODO
-        return new Response(403);
+        return new Response(403, $this->getHeadersCommon());
     }
     
     /**
@@ -155,5 +166,14 @@ class InclusionAPI implements RequestHandlerInterface, WorkbenchDependantInterfa
     public function getWorkbench()
     {
         return $this->workbench;
+    }
+    
+    /**
+     * 
+     * @return string[]
+     */
+    protected function getHeadersCommon() : array
+    {
+        return $this->headers;
     }
 }

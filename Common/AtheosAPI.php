@@ -39,19 +39,24 @@ class AtheosAPI extends InclusionAPI
         } else {
             if (mb_stripos($file, '..') !== false) {
                 $this->getWorkbench()->getLogger()->logException(new RuntimeException('Suspicious request to Atheos API blocked: ' . $file));
-                return new Response(404);
+                return new Response(404, $this->getHeadersCommon());
             }
         }
         
         $base = $this->getBaseFilePath();
+        // On Azure linux app services the base path has no leading slash for some reason.
+        // Adding it here as a workaround for now
+        if (! FilePathDataType::isAbsolute($base)) {
+            $base = '/' . $base;
+        }
         chdir($base);
         
         if (! file_exists($base . $file)) {
             $this->getWorkbench()->getLogger()->logException(new RuntimeException('IDE file not found: ' . $base . $file));
-            return new Response(404);
+            return new Response(404, $this->getHeadersCommon());
         }
         
-        $headers = [];
+        $headers = $this->getHeadersCommon();
         if (strcasecmp(FilePathDataType::findExtension($file), 'php') === 0) {
             $this->createDataFolders();
             $user = $this->getWorkbench()->getSecurity()->getAuthenticatedUser();
@@ -60,7 +65,7 @@ class AtheosAPI extends InclusionAPI
             switch (mb_strtolower($_POST['target'] ?? '')) {
                 case 'user':
                     if ($_POST['action'] !== 'keepAlive') {
-                        return new Response(200);
+                        return new Response(200, $this->getHeadersCommon());
                     }
                     break;
             }
@@ -91,6 +96,7 @@ class AtheosAPI extends InclusionAPI
             $this->restoreSession();
             
             $headers = headers_list();
+            $headers = array_merge($headers, $this->getHeadersCommon());
             if (stripos($file, 'controller') !== false && (mb_substr($output, 0, 1) === '[' || mb_substr($output, 0, 1) === '{')) {
                 $headers['Content-Type'] = 'application/json';
                 // There are cases, when Atheos prints multiple JSON objects - see MOD in `Atheos/traits/reply.php`
