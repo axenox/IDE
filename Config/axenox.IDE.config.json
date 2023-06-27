@@ -1,0 +1,21 @@
+{
+	"FACADE.HEADERS.CONTENT_SECURITY_POLICY.DEFAULT_SRC": "'self' 'unsafe-eval' 'unsafe-inline'",
+	"FACADE.HEADERS.CONTENT_SECURITY_POLICY.CONNECT_SRC": "'self'",
+	"FACADE.HEADERS.CONTENT_SECURITY_POLICY.SCRIPT_SRC": "'self' 'unsafe-eval' 'unsafe-inline'",
+	"FACADE.HEADERS.CONTENT_SECURITY_POLICY.SCRIPT_SRC_ELEM": "'self' 'unsafe-inline' blob:",
+	"FACADE.HEADERS.CONTENT_SECURITY_POLICY.FONT_SRC": "'self' 'unsafe-eval' 'unsafe-inline' blob: data:",
+	"FACADE.HEADERS.CONTENT_SECURITY_POLICY.IMG_SRC": "* 'self' 'unsafe-inline' blob: data: filesystem:",
+	"FACADE.HEADERS.CONTENT_SECURITY_POLICY.MEDIA_SRC": "* 'self' 'unsafe-inline' blob: data: filesystem: mediastream:",
+	"FACADE.HEADERS.CONTENT_SECURITY_POLICY.FLAGS": "block-all-mixed-content",
+	"FACADE.HEADERS.COMMON": {
+		"Access-Control-Allow-Origin": "",
+		"Access-Control-Allow-Credentials": "false",
+		"Access-Control-Allow-Methods": "GET",
+		"Access-Control-Allow-Headers": "",
+		"Access-Control-Expose-Headers": "",
+		"X-Frame-Options": "SAMEORIGIN",
+		"Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
+		"X-Content-Type-Options": "nosniff",
+		"X-XSS-Protection": "1; mode=block"
+	}
+}

@@ -13,6 +13,7 @@ use exface\Core\DataTypes\JsonDataType;
 use exface\Core\DataTypes\FilePathDataType;
 use exface\Core\Exceptions\UnexpectedValueException;
 use exface\Core\CommonLogic\Selectors\DataConnectionSelector;
+use exface\Core\DataTypes\UrlDataType;
 
 /**
  * 
@@ -39,12 +40,12 @@ class IDEFacade extends AbstractHttpFacade
                 if (! FilePathDataType::isAbsolute($path)) {
                     $path = '/' . $path;
                 }
-                $api = new AtheosAPI($this->getWorkbench(), 'atheos/', $path, 'index.php');
+                $api = new AtheosAPI($this->getWorkbench(), 'atheos/', $path, 'index.php', $this->buildHeadersCommon());
                 return $api->handle($request);
                 break;  
         }
         
-        return new Response(404, [], 'Nothing here yet!');
+        return new Response(404, $this->buildHeadersCommon(), 'Nothing here yet!');
   
     }
 
@@ -209,7 +210,7 @@ class IDEFacade extends AbstractHttpFacade
                 // remove Adminer denial of integration into iBrowser
                 // header_remove('X-Frame-Options');
                 $headers = headers_list();
-                $headers['X-Frame-Options'] = 'SAMEORIGIN';
+                $headers = array_merge($headers, $this->buildHeadersCommon());
                 return new Response(200, $headers, $html);
             
                 
@@ -231,7 +232,9 @@ class IDEFacade extends AbstractHttpFacade
                         $mimeType = mime_content_type($base.$file);
                         break;
                 }
-                return new Response(200, ['Content-Type' => $mimeType], $stream);
+                $headers = $this->buildHeadersCommon();
+                $headers['Content-Type'] = $mimeType;
+                return new Response(200, $headers, $stream);
         }
     }
     
@@ -251,5 +254,42 @@ class IDEFacade extends AbstractHttpFacade
         ob_end_clean();
         chdir($cwd);
         return $output;
+    }
+    
+    /**
+     *
+     * @return array
+     */
+    protected function buildHeadersCommon() : array
+    {
+        $headers = array_filter($this->getConfig()->getOption('FACADE.HEADERS.COMMON')->toArray());
+        
+        $workbenchHosts = [];
+        foreach ($this->getWorkbench()->getConfig()->getOption('SERVER.BASE_URLS') as $url) {
+            $host = UrlDataType::findHost($url);
+            if ($host) {
+                $workbenchHosts[] = $host;
+            }
+        }
+        
+        $cspString = '';
+        foreach ($this->getConfig()->getOptionGroup('FACADE.HEADERS.CONTENT_SECURITY_POLICY', true) as $directive => $values) {
+            // Skip the directive if the config option has no value (thus removing the directive)
+            if (empty($values)) {
+                continue;
+            }
+            // Otherwise add this directive to the policy
+            $directive = str_replace('_', '-', mb_strtolower($directive));
+            if ($directive === 'flags') {
+                $cspString .= $values . ' ; ';
+            } else {
+                // Add the hosts of the workbench base URLs to every directive to aviod issues
+                // with workbenches behind reverse proxies, where the same workbench can be
+                // reached through different URLs.
+                $cspString .= $directive . ' ' . implode(' ', $workbenchHosts) . ' ' . $values . ' ; ';
+            }
+        }
+        
+        return array_merge(['Content-Security-Policy' => $cspString], $headers);
     }
 }
