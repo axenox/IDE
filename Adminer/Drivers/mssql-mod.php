@@ -312,7 +312,11 @@ if (isset($_GET["mssql_mod"])) {
 
 	}
 
-
+	function idf_unescape_mssql($idf) {
+	    if (mb_substr($idf, 0, 1) === '[' && mb_substr($idf, -1) === ']');
+	    $idf = mb_substr($idf, 1, -1);
+	    return str_replace("]]", "]", $idf);
+	}
 
 	function idf_escape($idf) {
 		return "[" . str_replace("]", "]]", $idf) . "]";
@@ -449,7 +453,7 @@ WHERE OBJECT_NAME(i.object_id) = " . q($table)
 
 	function view($name) {
 		global $connection;
-		return array("select" => preg_replace('~^(?:[^[]|\[[^]]*])*\s+AS\s+~isU', '', $connection->result("SELECT VIEW_DEFINITION FROM INFORMATION_SCHEMA.VIEWS WHERE TABLE_SCHEMA = SCHEMA_NAME() AND TABLE_NAME = " . q($name))));
+		return array("select" => preg_replace('~^(?:[^[]|\[[^]]*])*\s+AS\s+~isU', '', $connection->result("SELECT VIEW_DEFINITION FROM INFORMATION_SCHEMA.VIEWS WHERE TABLE_SCHEMA = '" . get_schema() . "' AND TABLE_NAME = " . q($name))));
 	}
 
 	function collations() {
@@ -506,7 +510,7 @@ WHERE OBJECT_NAME(i.object_id) = " . q($table)
 				} else {
 					unset($val[6]); //! identity can't be removed
 					if ($column != $val[0]) {
-						queries("EXEC sp_rename " . q(table($table) . ".$column") . ", " . q(idf_unescape($val[0])) . ", 'COLUMN'");
+					    queries("EXEC sp_rename " . q((get_schema() ? get_schema() . '.' : '') . "{$table}.{$field[0]}") . ", " . q(idf_unescape_mssql($val[0])) . ", 'COLUMN'");
 					}
 					$alter["ALTER COLUMN " . implode("", $val)][] = "";
 				}
@@ -522,7 +526,7 @@ WHERE OBJECT_NAME(i.object_id) = " . q($table)
 			$alter[""] = $foreign;
 		}
 		foreach ($alter as $key => $val) {
-			if (!queries("ALTER TABLE " . idf_escape($name) . " $key" . implode(",", $val))) {
+			if (!queries("ALTER TABLE " . table($name) . " $key" . implode(",", $val))) {
 				return false;
 			}
 		}
