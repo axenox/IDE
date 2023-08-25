@@ -313,7 +313,7 @@ var HtmlGenerator = /** @class */ (function () {
         var modal = HtmlGenerator._getTemplateAsElement('<div id="tree-modal" style="position:fixed; top:50px; left:50px; width:calc(100% - 100px);height:calc(100% - 100px);background:white; border:1px solid; display:none">' +
             '   <h2>' +
             '       <span class="title">Tree browser</span>' +
-            '       <a class="close" href="#!" style="float:right;">Close</a>' +
+            '       <a class="close" href="#!" style="float:right;">&#10005;</a>' +
             '   </h2>' +
             '   <div class="modal-content" style="overflow:auto; position:absolute; width:calc(100% - 20px); height:calc(100% - 162px); top:62px; left:0; margin:0 10px; padding-bottom:100px;"></div>' +
             '</div>');
