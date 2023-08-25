@@ -11,6 +11,9 @@ function adminer_object() {
 	require_once "Plugins/disableJush.php";
 	require_once "Plugins/autocomplete.php";
 	require_once "Plugins/SaveMenuPos.php";
+	//require_once "Plugins/sql-log.php";
+	require_once "Plugins/AdminerTreeViewer/AdminerTreeViewer.php";
+	
 	require_once "Drivers/mssql-mod.php"; // the driver is enabled just by including
 
 	return new AdminerPlugin([
@@ -21,7 +24,9 @@ function adminer_object() {
 		// new AdminerDatabaseHide(),
 	    new AdminerDisableJush(),
 	    new AdminerAutocomplete(),
-	    new AdminerSaveMenuPos()
+	    new AdminerSaveMenuPos(),
+	    //new AdminerSqlLog(),
+	    new AdminerTreeViewer('Plugins/AdminerTreeViewer/script.js')
 	]);
 }
 
