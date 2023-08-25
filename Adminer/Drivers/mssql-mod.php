@@ -576,10 +576,14 @@ WHERE OBJECT_NAME(i.object_id) = " . q($table)
 	}
 
 	function foreign_keys($table) {
-		$return = array();
+	    global $adminer;
+	    $currentDB = $adminer->database();
+	    $return = array();
 		foreach (get_rows("EXEC sp_fkeys @fktable_name = " . q($table)) as $row) {
 			$foreign_key = &$return[$row["FK_NAME"]];
-			$foreign_key["db"] = $row["PKTABLE_QUALIFIER"];
+			// Make sure to leave db empty if it is the current DB as this is required to draw
+			// arrows in the DB schema diagram.
+			$foreign_key["db"] = $row["PKTABLE_QUALIFIER"] !== $currentDB ? $row["PKTABLE_QUALIFIER"] : "";
 			$foreign_key["table"] = $row["PKTABLE_NAME"];
 			$foreign_key["source"][] = $row["FKCOLUMN_NAME"];
 			$foreign_key["target"][] = $row["PKCOLUMN_NAME"];
