@@ -470,7 +470,11 @@ WHERE OBJECT_NAME(i.object_id) = " . q($table)
 
 	function error() {
 		global $connection;
-		return nl_br(h(preg_replace('~^(\[[^]]*])+~m', '', $connection->error)));
+		// This is a workaround for $connection not having the error probably due to decoupling from
+		// the original instance in connect() method. In the minified version the connections is $g.
+		global $g;
+		$msg = $connection->error ? $connection->error : ($g ? $g->error : '');
+		return nl_br(h(preg_replace('~^(\[[^]]*])+~m', '', $msg)));
 	}
 
 	function create_database($db, $collation) {
