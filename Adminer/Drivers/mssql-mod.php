@@ -582,8 +582,12 @@ WHERE OBJECT_NAME(i.object_id) = " . q($table)
 	function foreign_keys($table) {
 	    global $adminer;
 	    $currentDB = $adminer->database();
+	    $schema = get_schema();
+	    if ($schema) {
+	        $owner = ", @fktable_owner = '{$schema}'";
+	    }
 	    $return = array();
-		foreach (get_rows("EXEC sp_fkeys @fktable_name = " . q($table)) as $row) {
+	    foreach (get_rows("EXEC sp_fkeys @fktable_name = " . q($table) . $owner) as $row) {
 			$foreign_key = &$return[$row["FK_NAME"]];
 			// Make sure to leave db empty if it is the current DB as this is required to draw
 			// arrows in the DB schema diagram.
