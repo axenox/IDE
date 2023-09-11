@@ -6,6 +6,7 @@ body {width: 100% !important;}
 .content {width: calc(100% - 454px);}
 #lang {display: none;}
 #tree-modal h2 {padding: 10px;}
+#tree-modal .table-name-cell {text-align: left; font-weight: bold;}
 
 /*
  * Theme by Pepa Linha [http://webdream.cz]
