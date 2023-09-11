@@ -29,8 +29,6 @@ class AdminerForeignKeys {
 			}
 		</style>
 		<?php
-
-		return true;
 	}
 
 
