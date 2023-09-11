@@ -334,8 +334,8 @@ var HtmlGenerator = /** @class */ (function () {
             '       <tr>' +
             '           <th class="table-name-cell">' +
             '               <span class="table-name-caption"></span>' +
-            '               <a class="modify-all" style="padding-left: 20px" target="_blank">Modify</a>' +
-            '               <a class="close" style="padding-left: 20px" href="#!" target="_blank">Close</a>' +
+            '               <a class="modify-all" style="padding-left: 20px" target="_blank">[Modify]</a>' +
+            '               <a class="close" style="padding-left: 20px" href="#!" target="_blank">[Close]</a>' +
             '           </th>' +
             '       </tr>' +
             '       <tr class="headers"></tr>' +
@@ -397,7 +397,7 @@ var HtmlGenerator = /** @class */ (function () {
                     // create container to be able to store multiple reverse foreign keys
                     var linksContainer = HtmlGenerator._getTemplateAsElement('<div class="reverse-foreign-keys" style="display:none"></div>');
                     // create button to toggle container visibility
-                    var linkToggleButton = HtmlGenerator._getTemplateAsElement('<a href="#!"> [R]</a>');
+                    var linkToggleButton = HtmlGenerator._getTemplateAsElement('<a href="#!" title="Tables with foreign keys pointing to this row"> [F.keys]</a>');
                     linkToggleButton.addEventListener('click', function (e) {
                         var container = e.target.parentNode.querySelector('.reverse-foreign-keys');
                         if (container.style.display === 'none') {
@@ -445,7 +445,7 @@ var HtmlGenerator = /** @class */ (function () {
                 whereConditionsList.push(conditionName + " = " + selectionQuery.whereConditions[conditionName]);
             }
         }
-        return selectionQuery.tableName + " [" + whereConditionsList.join(', ') + "]";
+        return selectionQuery.tableName + " (" + whereConditionsList.join(', ') + ")";
     };
     ;
     /**
