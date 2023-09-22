@@ -34,6 +34,7 @@ class IDEFacade extends AbstractHttpFacade
         switch (true) {     
             // Autologin via function runAdminer
             case StringDataType::startsWith($pathInFacade, 'adminer/'):
+            case StringDataType::startsWith($pathInFacade, 'externals/'):
                 return $this->runAdminer($pathInFacade);
             case StringDataType::startsWith($pathInFacade, 'atheos/'):
                 $path = $this->getApp()->getDirectoryAbsolutePath() . DIRECTORY_SEPARATOR . 'Atheos';
@@ -116,7 +117,7 @@ class IDEFacade extends AbstractHttpFacade
             'sqlite' => 'sqlite', // what is the difference to sqlite2???
             'pgsql' => 'pgsql',
             'oracle' => 'oracle',
-            'mssql' => 'mssql_mod',
+            'mssql' => 'mssql',
             'mongo' => 'mongo',
             'elastic' => 'elastic'
         ];
@@ -160,11 +161,36 @@ class IDEFacade extends AbstractHttpFacade
      */
     protected function runAdminer(string $pathInFacade) : ResponseInterface
     {
+        if (StringDataType::startsWith($pathInFacade, 'externals/')) {
+            $pathInFacade = 'adminer/' . $pathInFacade;
+        }
         $target = StringDataType::substringAfter($pathInFacade, 'adminer/');
         $selector = rtrim($target, '/');
         $base = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'Adminer' . DIRECTORY_SEPARATOR;
+        $baseSrc = $base . 'src' . DIRECTORY_SEPARATOR;
+        $baseSrcAdminer = $base . 'adminer' . DIRECTORY_SEPARATOR;
         switch (true) {
-            
+            case file_exists($baseSrc . $selector):
+            case file_exists($baseSrcAdminer . $selector):
+                $file = $selector;
+                $stream = fopen($baseSrcAdminer.$file, 'r');
+                switch (FilePathDataType::findExtension($file)) {
+                    // read css-file
+                    case 'css':
+                        $mimeType = 'text/css';
+                        break;
+                        // read different file
+                    case 'js':
+                        $mimeType = 'text/javascript';
+                        break;
+                        // read different file
+                    Default:
+                        $mimeType = mime_content_type($base.$file);
+                        break;
+                }
+                $headers = $this->buildHeadersCommon();
+                $headers['Content-Type'] = $mimeType;
+                return new Response(200, $headers, $stream);
             case ! file_exists($base . $selector):   
                 if (isset($_POST['logout'])) {
                     $_GET = [];
