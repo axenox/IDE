@@ -22,6 +22,7 @@ function adminer_object() {
 	    new AdminerAutocomplete(),
 	    new AdminerSaveMenuPos(),
 	    new AdminerTreeViewer('plugins/tree-viewer/script.js'),
+	    new AdminerFrames(true),
 	]);
 }
 $dir = __DIR__;
