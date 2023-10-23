@@ -155,7 +155,9 @@ if (isset($_GET["mssql"])) {
 			}
 
 			function __destruct() {
-				sqlsrv_free_stmt($this->_result);
+			    if (is_resource($this->_result)) {
+				    sqlsrv_free_stmt($this->_result);
+			    }
 			}
 		}
 
