@@ -10,7 +10,7 @@ class AdminerAutocomplete
 	public $keywords = [
 		'AS', 'DELETE FROM', 'DISTINCT', 'EXPLAIN', 'FROM', 'GROUP BY', 'HAVING', 'INSERT INTO', 'INNER JOIN', 'IGNORE',
 		'LIMIT', 'LEFT JOIN', 'NULL', 'ORDER BY', 'ON DUPLICATE KEY UPDATE', 'SELECT', 'UPDATE', 'WHERE', 'ON', 'USING',
-	    'CROSS_JOIN'
+	    'CROSS JOIN'
 	];
 
 
@@ -21,10 +21,15 @@ class AdminerAutocomplete
 		}
 
 		$suggests = [];
+		$schema = get_schema();
 		foreach (array_keys(tables_list()) as $table) {
-			$suggests[] = trim($table);
+		    $tableWithSchema = trim($table);
+		    if ($schema !== null && $schema !== '') {
+		        $tableWithSchema = "$schema.$tableWithSchema";
+		    }
+			$suggests[] = $tableWithSchema;
 			foreach (fields($table) as $field => $foo) {
-				$suggests[] = "$table.$field";
+				$suggests[] = "$tableWithSchema.$field";
 			}
 		} ?>
 <style<?php echo nonce();?>>
