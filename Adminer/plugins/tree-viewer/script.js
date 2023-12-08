@@ -84,7 +84,6 @@ var AdminerAjaxConnector = /** @class */ (function () {
 					break;
 			}
 		});
-		console.log(self, this);
     }
     /**
      * Sends AJAX request to server getting page with selection according to selectionQuery. Since call
@@ -278,7 +277,6 @@ var AdminerAjaxConnector = /** @class */ (function () {
      * @private
      */
     AdminerAjaxConnector._ajaxRequest = function (theUrl, callback) {
-	console.log(theUrl);
         return __awaiter(this, void 0, void 0, function () {
             var response, _a;
             return __generator(this, function (_b) {
