@@ -605,6 +605,29 @@ WHERE OBJECT_NAME(i.object_id) = " . q($table)
 	function move_tables($tables, $views, $target) {
 		return apply_queries("ALTER SCHEMA " . idf_escape($target) . " TRANSFER", array_merge($tables, $views));
 	}
+	
+	/** Copy tables to other schema
+	 * @param array
+	 * @param array
+	 * @param string
+	 * @return bool
+	 */
+	function copy_tables($tables, $views, $target) {
+	    global $connection;
+	    foreach ($tables as $table) {
+	        $name = ($target == get_schema() ? table("copy_$table") : idf_escape($target) . "." . table($table));
+	        if (($_POST["overwrite"] && !queries("\nIF OBJECT_ID ('$table', N'U') IS NULL \nDROP TABLE $name"))
+            || !queries("SELECT * INTO $name FROM " . table($table))
+            ) {
+                return false;
+            }
+	    }
+	    if (! empty($views)) {
+	        $connection->error = 'Cannot copy views in Microsoft SQL';
+	        return false;
+	    }
+	    return true;
+	}
 
 	function trigger($name) {
 		if ($name == "") {
@@ -699,7 +722,7 @@ WHERE sys1.xtype = 'TR' AND sys2.name = " . q($table)
 	}
 
 	function support($feature) {
-		return preg_match('~^(comment|columns|database|drop_col|indexes|descidx|scheme|sql|table|trigger|view|view_trigger)$~', $feature); //! routine|
+		return preg_match('~^(comment|columns|database|drop_col|indexes|descidx|scheme|sql|table|copy|trigger|view|view_trigger)$~', $feature); //! routine|
 	}
 
 	function driver_config() {
