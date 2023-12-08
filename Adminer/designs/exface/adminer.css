@@ -11,11 +11,11 @@ body {width: 100% !important;}
 .size {width: 8ex}
 
 /* Top nav as tabs */
-#content > #ajaxstatus + p.links {
+#content > p:nth-of-type(2).links {
     border-bottom: 1px solid #2e84e4;
     width: 100%;
 }
-#content > #ajaxstatus + p.links a {
+#content > p:nth-of-type(2).links a {
 	display: inline-block;
 	border-bottom: 1px solid #fff;
 	border-bottom-width: 0;
@@ -24,7 +24,7 @@ body {width: 100% !important;}
 	font-weight: normal;
 	color: #2e84e4;
 }
-#content > #ajaxstatus + p.links a.active {
+#content > p:nth-of-type(2).links a.active {
 	font-weight: bold;
 	background-color: white;
 	border-bottom: 1px solid white;
@@ -376,7 +376,8 @@ p code + a:visited:hover {
     margin-bottom: 5px;
     transition: background .4s ease;
 }
-#content p.links a:hover {
+#content p.links a:not(.active):hover {
+	color: #fff;
     background: #34567c;	
     text-decoration: none;
 }
