@@ -7,6 +7,37 @@ body {width: 100% !important;}
 #lang {display: none;}
 #tree-modal h2 {padding: 10px;}
 #tree-modal .table-name-cell {text-align: left; font-weight: bold;}
+/* Increase with of small inputs like SELECT LIMIT */
+.size {width: 8ex}
+
+/* Top nav as tabs */
+#content > #ajaxstatus + p.links {
+    border-bottom: 1px solid #2e84e4;
+    width: 100%;
+}
+#content > #ajaxstatus + p.links a {
+	display: inline-block;
+	border-bottom: 1px solid #fff;
+	border-bottom-width: 0;
+	margin: 0;
+	background-color: #fff;
+	font-weight: normal;
+	color: #2e84e4;
+}
+#content > #ajaxstatus + p.links a.active {
+	font-weight: bold;
+	background-color: white;
+	border-bottom: 1px solid white;
+	margin-bottom: -1px;
+}
+/* Structure section (e.g. Trigger) without content*/
+#content h3 + p.links {
+	margin-top: 0;
+}
+
+#edit-fields td > input[type=checkbox] {
+	margin-top: 8px;
+}
 
 /*
  * Theme by Pepa Linha [http://webdream.cz]
@@ -162,6 +193,8 @@ fieldset {
 	margin: 0 0 15px;
 	border: 0;
 	background: #f5f5f5;
+	/* MOD exface */
+	min-height: 61px;
 }
 
 fieldset select {
@@ -326,18 +359,35 @@ p code + a:visited:hover {
 	margin: -10px 0 15px;
 }
 
+/* MOD exface */
 #content p.links a {
-	padding: 8px;
+	/*padding: 8px;*/
 	margin: 0;
 	display: table-cell;
-	border: 1px solid #fff;
+	/* border: 1px solid #fff;*/
+	border: 1px solid #2e84e4;
+	border: 0;
+    padding: 7px 12px;
+    cursor: pointer;
+    outline: 0;
+    box-shadow: none;
+    background: #2e84e4;
+    color: #fff;
+    margin-bottom: 5px;
+    transition: background .4s ease;
+}
+#content p.links a:hover {
+    background: #34567c;	
+    text-decoration: none;
 }
 
+/* MOD exface
 #content p.links a,
 #content p.links a:visited,
 #content p.links a:hover {
 	color: #2e84e4;
 }
+*/
 
 #content p.links a.active {
 	font-weight: normal;
@@ -460,6 +510,9 @@ p code + a:visited:hover {
 	left: 54px;
 }
 
+/* MOD exface */
+input {vertical-align: baseline}
+
 input:not([type]),
 input[type="color"],
 input[type="email"],
@@ -473,6 +526,9 @@ input[type="search"] {
 	padding: 6px;
 	margin: 0;
 	box-sizing: border-box;
+	/* MOD exface */
+	height: 31px;
+	vertical-align: top;
 }
 
 table:not(#table) input:not([type]),
@@ -499,6 +555,8 @@ input[type=button] {
 	font-weight: bold;
 	margin-bottom: 5px;
 	transition: background .4s ease;
+	/* MOD exface */
+	height: 31px;
 }
 
 input[type=submit][disabled],
@@ -541,6 +599,8 @@ select {
 label {
 	cursor: pointer;
 	margin-right: 6px;
+	/* MOD exface */
+	line-height: 29px;
 }
 
 .error,
