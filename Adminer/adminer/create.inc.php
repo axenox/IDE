@@ -149,6 +149,8 @@ if (!$_POST) {
 			$row["partition_names"] = array_keys($partitions);
 			$row["partition_values"] = array_values($partitions);
 		}
+
+        $adminer->selectLinks($row);
 	}
 }
 
