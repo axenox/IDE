@@ -34,6 +34,9 @@ body {width: 100% !important;}
 #content h3 + p.links {
 	margin-top: 0;
 }
+#content p:last-of-type.links {
+	margin-top: 0;
+}
 
 #edit-fields td > input[type=checkbox] {
 	margin-top: 8px;
@@ -361,10 +364,8 @@ p code + a:visited:hover {
 
 /* MOD exface */
 #content p.links a {
-	/*padding: 8px;*/
-	margin: 0;
-	display: table-cell;
-	/* border: 1px solid #fff;*/
+	margin: 0 5px 0 0;
+	display: inline-block;
 	border: 1px solid #2e84e4;
 	border: 0;
     padding: 7px 12px;
