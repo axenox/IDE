@@ -1,22 +1,23 @@
 {
-    "name": "axenox/ide",
-    "require": {
-        "exface/core": "^1.0"
-    },
-    "autoload": {
-        "psr-4": {
-            "\\axenox\\IDE\\": ""
-        },
-        "exclude-from-classmap": [
-            "/Config/",
-            "/Translations/",
-            "/Model/"
-        ]
-    },
-    "extra": {
-        "app": {
-            "app_uid": "0x11ed96509743e0c29650025041000001",
-            "app_alias": "axenox.IDE"
-        }
-    }
+	"name" : "axenox/ide",
+	"require" : {
+		"exface/core" : "^1.0",
+		"npm-asset/vuerd": "^2"
+	},
+	"autoload" : {
+		"psr-4" : {
+			"\\axenox\\IDE\\" : ""
+		},
+		"exclude-from-classmap" : [
+			"/Config/",
+			"/Translations/",
+			"/Model/"
+		]
+	},
+	"extra" : {
+		"app" : {
+			"app_uid" : "0x11ed96509743e0c29650025041000001",
+			"app_alias" : "axenox.IDE"
+		}
+	}
 }

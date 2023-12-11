@@ -7,7 +7,7 @@
 * @return null
 */
 function page_header($title, $error = "", $breadcrumb = array(), $title2 = "") {
-	global $LANG, $VERSION, $adminer, $drivers, $jush;
+	global $adminer, $drivers, $jush;
 	page_headers();
 	if (is_ajax() && $error) {
 		page_messages($error);
@@ -15,7 +15,61 @@ function page_header($title, $error = "", $breadcrumb = array(), $title2 = "") {
 	}
 	$title_all = $title . ($title2 != "" ? ": $title2" : "");
 	$title_page = strip_tags($title_all . (SERVER != "" && SERVER != "localhost" ? h(" - " . SERVER) : "") . " - " . $adminer->name());
+	page_head_body($title_page, $error);
 	?>
+
+<div id="help" class="jush-<?php echo $jush; ?> jsonly hidden"></div>
+<?php echo script("mixin(qs('#help'), {onmouseover: function () { helpOpen = 1; }, onmouseout: helpMouseout});"); ?>
+
+<div id="content">
+<?php
+	if ($breadcrumb !== null) {
+		$link = substr(preg_replace('~\b(username|db|ns)=[^&]*&~', '', ME), 0, -1);
+		echo '<p id="breadcrumb"><a href="' . h($link ? $link : ".") . '">' . $drivers[DRIVER] . '</a> &raquo; ';
+		$link = substr(preg_replace('~\b(db|ns)=[^&]*&~', '', ME), 0, -1);
+		$server = $adminer->serverName(SERVER);
+		$server = ($server != "" ? $server : lang('Server'));
+		if ($breadcrumb === false) {
+			echo "$server\n";
+		} else {
+			echo "<a href='" . h($link) . "' accesskey='1' title='Alt+Shift+1'>$server</a> &raquo; ";
+			if ($_GET["ns"] != "" || (DB != "" && is_array($breadcrumb))) {
+				echo '<a href="' . h($link . "&db=" . urlencode(DB) . (support("scheme") ? "&ns=" : "")) . '">' . h(DB) . '</a> &raquo; ';
+			}
+			if (is_array($breadcrumb)) {
+				if ($_GET["ns"] != "") {
+					echo '<a href="' . h(substr(ME, 0, -1)) . '">' . h($_GET["ns"]) . '</a> &raquo; ';
+				}
+				foreach ($breadcrumb as $key => $val) {
+					$desc = (is_array($val) ? $val[1] : h($val));
+					if ($desc != "") {
+						echo "<a href='" . h(ME . "$key=") . urlencode(is_array($val) ? $val[0] : $val) . "'>$desc</a> &raquo; ";
+					}
+				}
+			}
+			echo "$title\n";
+		}
+	}
+	echo "<h2>$title_all</h2>\n";
+	echo "<div id='ajaxstatus' class='jsonly hidden'></div>\n";
+	restart_session();
+	page_messages($error);
+	$databases = &get_session("dbs");
+	if (DB != "" && $databases && !in_array(DB, $databases, true)) {
+		$databases = null;
+	}
+	stop_session();
+	define("PAGE_HEADER", 1);
+}
+
+function page_head_body($title_page, $error = "") {
+    global $LANG, $VERSION, $adminer;
+    page_headers();
+    if (is_ajax() && $error) {
+        page_messages($error);
+        exit;
+    }
+    ?>
 <!DOCTYPE html>
 <html lang="<?php echo $LANG; ?>" dir="<?php echo lang('ltr'); ?>">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
@@ -61,48 +115,7 @@ var offlineMessage = '<?php echo js_escape(lang('You are offline.')); ?>';
 var thousandsSeparator = '<?php echo js_escape(lang(',')); ?>';
 </script>
 
-<div id="help" class="jush-<?php echo $jush; ?> jsonly hidden"></div>
-<?php echo script("mixin(qs('#help'), {onmouseover: function () { helpOpen = 1; }, onmouseout: helpMouseout});"); ?>
-
-<div id="content">
-<?php
-	if ($breadcrumb !== null) {
-		$link = substr(preg_replace('~\b(username|db|ns)=[^&]*&~', '', ME), 0, -1);
-		echo '<p id="breadcrumb"><a href="' . h($link ? $link : ".") . '">' . $drivers[DRIVER] . '</a> &raquo; ';
-		$link = substr(preg_replace('~\b(db|ns)=[^&]*&~', '', ME), 0, -1);
-		$server = $adminer->serverName(SERVER);
-		$server = ($server != "" ? $server : lang('Server'));
-		if ($breadcrumb === false) {
-			echo "$server\n";
-		} else {
-			echo "<a href='" . h($link) . "' accesskey='1' title='Alt+Shift+1'>$server</a> &raquo; ";
-			if ($_GET["ns"] != "" || (DB != "" && is_array($breadcrumb))) {
-				echo '<a href="' . h($link . "&db=" . urlencode(DB) . (support("scheme") ? "&ns=" : "")) . '">' . h(DB) . '</a> &raquo; ';
-			}
-			if (is_array($breadcrumb)) {
-				if ($_GET["ns"] != "") {
-					echo '<a href="' . h(substr(ME, 0, -1)) . '">' . h($_GET["ns"]) . '</a> &raquo; ';
-				}
-				foreach ($breadcrumb as $key => $val) {
-					$desc = (is_array($val) ? $val[1] : h($val));
-					if ($desc != "") {
-						echo "<a href='" . h(ME . "$key=") . urlencode(is_array($val) ? $val[0] : $val) . "'>$desc</a> &raquo; ";
-					}
-				}
-			}
-			echo "$title\n";
-		}
-	}
-	echo "<h2>$title_all</h2>\n";
-	echo "<div id='ajaxstatus' class='jsonly hidden'></div>\n";
-	restart_session();
-	page_messages($error);
-	$databases = &get_session("dbs");
-	if (DB != "" && $databases && !in_array(DB, $databases, true)) {
-		$databases = null;
-	}
-	stop_session();
-	define("PAGE_HEADER", 1);
+<?php 
 }
 
 /** Send HTTP headers
