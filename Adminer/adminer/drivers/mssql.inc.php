@@ -606,18 +606,38 @@ WHERE OBJECT_NAME(i.object_id) = " . q($table)
 		return apply_queries("ALTER SCHEMA " . idf_escape($target) . " TRANSFER", array_merge($tables, $views));
 	}
 	
-	/** Copy tables to other schema
+	/** 
+	 * Copy tables and views to other schema
+	 * 
+	 * Tables will be copied without their data
+	 * 
 	 * @param array
 	 * @param array
 	 * @param string
 	 * @return bool
 	 */
-	function copy_tables($tables, $views, $target) {
+	function copy_tables($tables, $views, $targetSchema) {
 	    global $connection;
-	    foreach ($tables as $table) {
-	        $name = ($target == get_schema() ? table("copy_$table") : idf_escape($target) . "." . table($table));
-	        if (($_POST["overwrite"] && !queries("\nIF OBJECT_ID ('$table', N'U') IS NULL \nDROP TABLE $name"))
-            || !queries("SELECT * INTO $name FROM " . table($table))
+	    foreach ($tables as $srcTableName) {
+	        $srcSchema = get_schema();
+	        $targetTableName = ($targetSchema == $srcSchema ? "{$srcTableName}_copy" : $srcTableName);
+	        $targetTableFull = ($targetSchema == $srcSchema ? table($targetTableName) : idf_escape($targetSchema) . "." . table($targetTableName));
+	        if (
+	            // DROP table with same name in target schema if overwrite was checked
+	            ($_POST["overwrite"] && !queries("\nIF OBJECT_ID ('$srcTableName', N'U') IS NULL \nDROP TABLE $targetTableFull"))
+                // Copy the table without data (via WHERE, which is always false). This will copy
+                // IDENTITY columns, but no constraints, so the copied table won't have a primary key yet
+	            || !queries("SELECT * INTO $targetTableFull FROM " . table($srcTableName) . " WHERE 1 = 0")
+	            // Copy the primary key constraint
+	            || !queries("DECLARE @pkey NVARCHAR(max);
+SELECT @pkey = COLUMN_NAME
+    FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+    WHERE OBJECTPROPERTY(OBJECT_ID(CONSTRAINT_SCHEMA + '.' + QUOTENAME(CONSTRAINT_NAME)), 'IsPrimaryKey') = 1
+        AND TABLE_NAME = '{$srcTableName}' 
+        AND TABLE_SCHEMA = '{$srcSchema}';
+IF @pkey IS NOT NULL
+EXEC('ALTER TABLE {$targetTableFull} ADD CONSTRAINT PK_{$targetTableName} PRIMARY KEY CLUSTERED (' + @pkey + ')');
+                ")
             ) {
                 return false;
             }
