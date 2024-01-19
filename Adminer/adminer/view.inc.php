@@ -2,8 +2,8 @@
 $TABLE = $_GET["view"];
 $row = $_POST;
 $orig_type = "VIEW";
+$status = table_status($TABLE);
 if ($jush == "pgsql" && $TABLE != "") {
-	$status = table_status($TABLE);
 	$orig_type = strtoupper($status["Engine"]);
 }
 
@@ -45,6 +45,7 @@ if (!$_POST && $TABLE != "") {
 }
 
 page_header(($TABLE != "" ? lang('Alter view') : lang('Create view')), $error, array("table" => $TABLE), h($TABLE));
+$adminer->selectLinks($status);
 ?>
 
 <form action="" method="post">
