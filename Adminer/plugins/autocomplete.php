@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				];
 				
 				// Add table aliases from the current text 
-				aMatches = [...sValue.matchAll(/(from|join)\s+(\w+\.)?((\w*) (as )?(\w+))/gmi)];
+				aMatches = [...sValue.matchAll(/(from|join)\s+(\w+\.)?((\w*)\s+(as\s+)?(\w+))/gmi)];
 				aMatches.forEach(function(aMatch){
 					/*
 					[
@@ -84,15 +84,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         ],
                     ]
                     */
-					var sTable = aMatch[4];
-					var sAlias = aMatch[6];
-					var sOp = aMatch[1];
+					var sTable = (aMatch[2] + aMatch[4]).trim();
+					var sAlias = (aMatch[6]).trim();
+					var sOp = (aMatch[1]).trim();
 					if ((sAlias.toUpperCase() === 'ON' || sAlias.toUpperCase() === 'USING') && sOp.toUpperCase() === 'JOIN') {
 						return;
-					}
+					}console.log('suggest');
 					if (sTable !== undefined && sAlias !== undefined) {
 						aSuggestions.push({value: sAlias, score: 3, meta: 'name'});
 						suggests.forEach(function(sWord){
+							console.log(sWord);
 							if (sWord.startsWith(sTable+'.')) {
 								aSuggestions.push({value: sAlias + '.' + sWord.substring((sTable + '.').length), score: 3, meta: 'name'});
 							}
