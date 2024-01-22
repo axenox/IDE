@@ -69,33 +69,55 @@ document.addEventListener('DOMContentLoaded', () => {
 				];
 				
 				// Add table aliases from the current text 
-				aMatches = [...sValue.matchAll(/(from|join)\s+(\w+\.)?((\w*)\s+(as\s+)?(\w+))/gmi)];
-				aMatches.forEach(function(aMatch){
-					/*
-					[
-						0: [
-        					0: "FROM dbo.date_dimension AS dd",
-                            1: "FROM",
-                            2: "dbo."
-                            3: "date_dimension AS dd",
-                            4: "date_dimension",
-                            5: "AS"
-                            6: "dd",
-                        ],
+				/*
+				[
+					0: [
+    					0: "FROM dbo.date_dimension AS dd",
+                        1: "FROM",
+                        2: "dbo.",
+                        3: "dbo"
+                        4: "date_dimension AS dd",
+                        5: "date_dimension",
+                        6: "AS"
+                        7: "dd",
+                    ],
+                    1: [
+    					0: "FROM [dbo].[date_dimension] AS dd",
+                        1: "FROM",
+                        2: "[dbo].",
+                        3: "dbo"
+                        4: "[date_dimension] AS dd",
+                        5: "date_dimension",
+                        6: "AS"
+                        7: "dd",
+                    ],
+                    2: [
+    					0: "FROM `date_dimension` AS dd",
+                        1: "FROM",
+                        2: null,
+                        3: null,
+                        4: "`date_dimension` AS dd",
+                        5: "date_dimension",
+                        6: "AS"
+                        7: "dd",
                     ]
-                    */
-					var sTable = (aMatch[2] + aMatch[4]).trim();
-					var sAlias = (aMatch[6]).trim();
+                ]
+                */
+				aMatches = [...sValue.matchAll(/(from|join)\s+(["`\[]?(\w+)["`\]]?\.)?(["`\[]?(\w*)["`\]]?\s+(as\s+)?["`\[]?(\w+)["`\]]?)/gmi)];
+				aMatches.forEach(function(aMatch){
+					var sTable = ((aMatch[3] ? aMatch[3] + '.' : '') + aMatch[5]).trim();
+					var sAlias = (aMatch[7]).trim();
 					var sOp = (aMatch[1]).trim();
 					if ((sAlias.toUpperCase() === 'ON' || sAlias.toUpperCase() === 'USING') && sOp.toUpperCase() === 'JOIN') {
 						return;
-					}console.log('suggest');
+					}
 					if (sTable !== undefined && sAlias !== undefined) {
-						aSuggestions.push({value: sAlias, score: 3, meta: 'name'});
+						// Add the found table alias to the suggestions
+						aSuggestions.push({value: sAlias, score: 3, meta: 'alias'});
 						suggests.forEach(function(sWord){
-							console.log(sWord);
-							if (sWord.startsWith(sTable+'.')) {
-								aSuggestions.push({value: sAlias + '.' + sWord.substring((sTable + '.').length), score: 3, meta: 'name'});
+							// Add all columns of the aliased table 
+							if (sWord.startsWith(sTable + '.')) {
+								aSuggestions.push({value: sAlias + '.' + sWord.substring((sTable + 1).length), score: 3, meta: 'column'});
 							}
 						});
 					}
