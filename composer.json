@@ -2,7 +2,7 @@
 	"name" : "axenox/ide",
 	"require" : {
 		"exface/core" : "^1.0",
-		"npm-asset/vuerd": "^2"
+		"npm-asset/dineug--erd-editor" : "^2"
 	},
 	"autoload" : {
 		"psr-4" : {
