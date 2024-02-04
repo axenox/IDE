@@ -534,7 +534,7 @@ token: 15360:155241
 </div>
 <erd-editor></erd-editor>
 
-<script<?php echo nonce(); ?> src="../../../vendor/npm-asset/vuerd/dist/vuerd.min.js"></script>
+<script<?php echo nonce(); ?> src="../externals/vuerd/dist/vuerd.min.js"></script>
 <!-- or module -->
 <!-- <script type="module" src="https://cdn.jsdelivr.net/npm/vuerd/dist/vuerd.esm.js"></script> -->
 <script<?php echo nonce(); ?>>
