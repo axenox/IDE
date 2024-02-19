@@ -120,7 +120,7 @@ if ($_POST && !process_fields($row["fields"]) && !$error) {
 }
 
 page_header(($TABLE != "" ? lang('Alter table') : lang('Create table')), $error, array("table" => $TABLE), h($TABLE));
-$adminer->selectLinks($row);
+$adminer->selectLinks($table_status);
 
 if (!$_POST) {
 	$row = array(
