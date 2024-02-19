@@ -444,7 +444,8 @@ WHERE OBJECT_NAME(i.object_id) = " . q($table)
 
 	function view($name) {
 		global $connection;
-		return array("select" => preg_replace('~^(?:[^[]|\[[^]]*])*\s+AS\s+~isU', '', $connection->result("SELECT VIEW_DEFINITION FROM INFORMATION_SCHEMA.VIEWS WHERE TABLE_SCHEMA = '" . get_schema() . "' AND TABLE_NAME = " . q($name))));
+		$sql = "SELECT OBJECT_DEFINITION(OBJECT_ID(" . q((get_schema() ? get_schema() . '.' : '') . $name) . "))";
+		return array("select" => preg_replace('~^(?:[^[]|\[[^]]*])*\s+AS\s+~isU', '', $connection->result($sql)));
 	}
 
 	function collations() {
