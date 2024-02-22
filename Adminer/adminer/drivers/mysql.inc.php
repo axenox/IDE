@@ -844,7 +844,7 @@ if (!defined("DRIVER")) {
 			}
 		}
 		foreach ($views as $table) {
-			$name = ($target == DB ? table("copy_$table") : idf_escape($target) . "." . table($table));
+			$name = ($target == DB ? table("$table_copy") : idf_escape($target) . "." . table($table));
 			$view = view($table);
 			if (($_POST["overwrite"] && !queries("DROP VIEW IF EXISTS $name"))
 				|| !queries("CREATE VIEW $name AS $view[select]")) { //! USE to avoid db.table
