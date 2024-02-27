@@ -288,7 +288,8 @@ class IDEFacade extends AbstractHttpFacade
      */
     protected function buildHeadersCommon() : array
     {
-        $headers = array_filter($this->getConfig()->getOption('FACADE.HEADERS.COMMON')->toArray());
+        $baseHeaders = parent::buildHeadersCommon();
+        $facadeHeaders = array_filter($this->getConfig()->getOption('FACADE.HEADERS.COMMON')->toArray());
         
         $workbenchHosts = [];
         foreach ($this->getWorkbench()->getConfig()->getOption('SERVER.BASE_URLS') as $url) {
@@ -316,6 +317,7 @@ class IDEFacade extends AbstractHttpFacade
             }
         }
         
-        return array_merge(['Content-Security-Policy' => $cspString], $headers);
+        $secPolHeaders = ['Content-Security-Policy' => $cspString];
+        return array_merge($baseHeaders, $secPolHeaders, $facadeHeaders);
     }
 }

@@ -444,7 +444,8 @@ WHERE OBJECT_NAME(i.object_id) = " . q($table)
 
 	function view($name) {
 		global $connection;
-		return array("select" => preg_replace('~^(?:[^[]|\[[^]]*])*\s+AS\s+~isU', '', $connection->result("SELECT VIEW_DEFINITION FROM INFORMATION_SCHEMA.VIEWS WHERE TABLE_SCHEMA = '" . get_schema() . "' AND TABLE_NAME = " . q($name))));
+		$sql = "SELECT OBJECT_DEFINITION(OBJECT_ID(" . q((get_schema() ? get_schema() . '.' : '') . $name) . "))";
+		return array("select" => preg_replace('~^(?:[^[]|\[[^]]*])*\s+AS\s+~isU', '', $connection->result($sql)));
 	}
 
 	function collations() {
@@ -515,7 +516,19 @@ WHERE OBJECT_NAME(i.object_id) = " . q($table)
 			return queries("CREATE TABLE " . table($name) . " (" . implode(",", (array) $alter["ADD"]) . "\n)");
 		}
 		if ($table != $name) {
-			queries("EXEC sp_rename " . q(table($table)) . ", " . q($name));
+		    $schema = get_schema();
+		    queries("EXEC sp_rename " . q(table($table)) . ", " . q($name));
+			// Make sure to rename the primary key of the table too - otherwise copying a table
+			// multiple times (copy tbl1 > rename tbl1_copy > copy tbl1 again) will fail because
+			// to copied constraint name already exists
+			queries(<<<SQL
+DECLARE @oldConstr NVARCHAR(max)
+SELECT @oldConstr = CONCAT(CONSTRAINT_SCHEMA, '.', TABLE_NAME, '.', CONSTRAINT_NAME) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = '{$schema}' AND TABLE_NAME = '{$name}' AND CONSTRAINT_TYPE = 'PRIMARY KEY'
+IF @oldConstr IS NOT NULL
+BEGIN
+    EXEC sp_rename @oldConstr, 'PK_{$name}'
+END
+SQL);
 		}
 		if ($foreign) {
 			$alter[""] = $foreign;

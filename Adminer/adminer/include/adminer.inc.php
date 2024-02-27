@@ -187,7 +187,7 @@ class Adminer {
 				$links["create"] = lang('Alter table');
 			}
 		}
-		if ($set !== null) {
+		if ($set !== null && ! is_view($tableStatus)) {
 			$links["edit"] = lang('New item');
 		}
 		$name = $tableStatus["Name"];

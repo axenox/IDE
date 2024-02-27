@@ -1,8 +1,7 @@
 {
 	"name" : "axenox/ide",
 	"require" : {
-		"exface/core" : "^1.0",
-		"npm-asset/vuerd": "^2"
+		"exface/core" : "^1.0"
 	},
 	"autoload" : {
 		"psr-4" : {
