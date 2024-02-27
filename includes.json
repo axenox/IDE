@@ -21,5 +21,17 @@
     	},
         "description": "Database management in a single PHP file.",
         "homepage": "https://www.adminer.org/"
+    },
+    {
+        "name": "npm-asset/dineug--erd-editor",
+        "version": "2.2.11",
+        "license": [
+	        "MIT"
+	    ],
+        "license_link": {
+        	"Apache-2.0": "https://github.com/dineug/erd-editor/?tab=MIT-1-ov-file"
+    	},
+        "description": "Entity-Relationship Diagram Editor",
+        "homepage": "https://github.com/dineug/erd-editor"
     }
 ]
