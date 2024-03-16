@@ -76,8 +76,9 @@ class AtheosAPI extends InclusionAPI
                 $this->logIn($user, $app);
             }
             
-            $vendorFolder = str_replace(AliasSelectorInterface::ALIAS_NAMESPACE_DELIMITER, '/', $appSelector);
-            if (! StringDataType::endsWith($_SESSION['projectPath'], $vendorFolder, false)) {
+            $appFolder = str_replace(AliasSelectorInterface::ALIAS_NAMESPACE_DELIMITER, '/', $appSelector);
+            $vendorFolder = FilePathDataType::normalize($this->getWorkbench()->filemanager()->getPathToVendorFolder(), '/');
+            if (strcasecmp($_SESSION['projectPath'], $vendorFolder . '/' . $appFolder) !== 0) {
                 $app = $app ?? AppFactory::createFromAnything($appSelector, $this->getWorkbench());
                 $this->switchProject($app);
             }
