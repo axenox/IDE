@@ -829,10 +829,12 @@ if (!defined("DRIVER")) {
 	function copy_tables($tables, $views, $target) {
 		queries("SET sql_mode = 'NO_AUTO_VALUE_ON_ZERO'");
 		foreach ($tables as $table) {
-			$name = ($target == DB ? table("copy_$table") : idf_escape($target) . "." . table($table));
+			$name = ($target == DB ? table("{$table}_copy") : idf_escape($target) . "." . table($table));
 			if (($_POST["overwrite"] && !queries("\nDROP TABLE IF EXISTS $name"))
 				|| !queries("CREATE TABLE $name LIKE " . table($table))
-				|| !queries("INSERT INTO $name SELECT * FROM " . table($table))
+			    // MOD ExFace do not copy data
+			    // TODO add a checkbox in the UI for this
+				// || !queries("INSERT INTO $name SELECT * FROM " . table($table))
 			) {
 				return false;
 			}
@@ -844,7 +846,7 @@ if (!defined("DRIVER")) {
 			}
 		}
 		foreach ($views as $table) {
-			$name = ($target == DB ? table("$table_copy") : idf_escape($target) . "." . table($table));
+			$name = ($target == DB ? table("{$table}_copy") : idf_escape($target) . "." . table($table));
 			$view = view($table);
 			if (($_POST["overwrite"] && !queries("DROP VIEW IF EXISTS $name"))
 				|| !queries("CREATE VIEW $name AS $view[select]")) { //! USE to avoid db.table
