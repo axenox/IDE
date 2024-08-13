@@ -78,7 +78,7 @@ class IDEFacade extends AbstractHttpFacade
                     $password = '12345678';
                 }
                 $auth = [
-                    'server' => $connectionConfig['host'],
+                    'server' => $connectionConfig['host'] . ($connectionConfig['port'] ? ':' . $connectionConfig['port'] : ''),
                     'username' => $connectionConfig['user'],
                     'password' => $password,
                     'driver' => $this->getAdminerDriver($connectorClass),
@@ -92,7 +92,7 @@ class IDEFacade extends AbstractHttpFacade
                     $password = '12345678';
                 }
                 $auth = [
-                    'server' => $connectionConfig['serverName'] ?? $connectionConfig['host'],
+                    'server' => ($connectionConfig['serverName'] ?? $connectionConfig['host']) . ($connectionConfig['port'] ? ':' . $connectionConfig['port'] : ''),
                     'username' => $connectionConfig['UID'] ?? $connectionConfig['user'],
                     'password' => $password,
                     'driver' => $this->getAdminerDriver($connectorClass),
