@@ -731,6 +731,76 @@ WHERE sys1.xtype = 'TR' AND sys2.name = " . q($table)
 		return array();
 	}
 	
+	/**
+	 * Get SQL command to drop a table
+	 * 
+	 * @param string $table
+	 * @param bool $if_not_exists
+	 * @param bool $drop_constraints
+	 * @return string
+	 */
+	function drop_table_sql($table, $if_not_exists = false, $drop_dependencies = false)
+	{
+	    $t = table($table);
+	    $sql = $if_not_exists ? "IF OBJECT_ID ({$t}, N'U') IS NOT NULL\n" : '';
+	    if (! $drop_dependencies) {
+	       $sql .= "DROP TABLE $t";
+	    } else {
+	       $sql .= "
+BEGIN
+    DECLARE @table NVARCHAR(max) = 'YourTableName';
+    DECLARE @schema NVARCHAR(max) = 'dbo';
+    DECLARE @stmt NVARCHAR(max);
+	-- STEP1: Remove foreign keys to this table
+	-- Cursor to generate ALTER TABLE DROP CONSTRAINT statements  
+	DECLARE cur CURSOR FOR
+		SELECT 'ALTER TABLE ' + OBJECT_SCHEMA_NAME(parent_object_id) + '.' + OBJECT_NAME(parent_object_id) + ' DROP CONSTRAINT ' + name
+		FROM sys.foreign_keys 
+		WHERE OBJECT_SCHEMA_NAME(referenced_object_id) = @schema 
+			AND OBJECT_NAME(referenced_object_id) = @table;
+ 
+   OPEN cur;
+   FETCH cur INTO @stmt;
+	-- Drop each found foreign key constraint 
+	WHILE @@FETCH_STATUS = 0
+		BEGIN
+			EXEC (@stmt);
+			FETCH cur INTO @stmt;
+		END
+	CLOSE cur;
+	DEALLOCATE cur;
+	
+	-- STEP2: remove constraints inside this table
+	SELECT @stmt = '';
+	SELECT @stmt += N'
+ALTER TABLE ' + OBJECT_NAME(parent_object_id) + ' DROP CONSTRAINT ' + OBJECT_NAME(object_id) + ';' 
+	FROM SYS.OBJECTS
+	WHERE TYPE_DESC LIKE '%CONSTRAINT' AND OBJECT_NAME(parent_object_id) = @table AND SCHEMA_NAME(schema_id) = @schema;
+	EXEC(@stmt);
+
+	-- FINALLY drop the table itself
+	DROP TABLE CONCAT(@schema, '.', @table);
+END
+";
+	    }
+	    return $sql;
+	}
+	
+	/**
+	 * Get SQL command to drop a view
+	 * 
+	 * @param string $table
+	 * @param boolean $if_not_exists
+	 * @return string
+	 */
+	function drop_view_sql($table, $if_not_exists = false)
+	{
+	    $t = table($table);
+	    $sql = $if_not_exists ? "IF OBJECT_ID ({$t}, N'V') IS NOT NULL\n" : '';
+	    $sql .= "DROP VIEW $t";
+	    return $sql;
+	}
+	
 	/** 
 	 * Get SQL command to create table
 	 * 
@@ -744,7 +814,7 @@ WHERE sys1.xtype = 'TR' AND sys2.name = " . q($table)
 	 */
 	function create_sql($table, $auto_increment, $style) {
 	    global $connection;
-	    $sql = <<<SQL
+	    $sql = "
 
 DECLARE @table_name SYSNAME
 SELECT @table_name = 'dbo.Abruf'
@@ -890,7 +960,7 @@ SELECT @SQL = 'CREATE TABLE ' + @object_name + CHAR(13) + '(' + CHAR(13) + STUFF
     ), '')
 
 SELECT @SQL
-SQL;
+";
 	    // Since these are multiple statements, use a multi-query and iterate through the results
 	    // ultimately using the return value of the last result (the `SELECT @SQL`).
 	    $connection->multi_query($sql);
