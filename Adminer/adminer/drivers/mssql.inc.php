@@ -814,10 +814,11 @@ END
 	 */
 	function create_sql($table, $auto_increment, $style) {
 	    global $connection;
-	    $sql = "
+		$tableQuoted = q((get_schema() ? get_schema() . '.' : '') . $table);
+	    $sql = <<<SQL
 
 DECLARE @table_name SYSNAME
-SELECT @table_name = 'dbo.Abruf'
+SELECT @table_name = {$tableQuoted}
 
 DECLARE 
       @object_name SYSNAME
@@ -960,7 +961,7 @@ SELECT @SQL = 'CREATE TABLE ' + @object_name + CHAR(13) + '(' + CHAR(13) + STUFF
     ), '')
 
 SELECT @SQL
-";
+SQL;
 	    // Since these are multiple statements, use a multi-query and iterate through the results
 	    // ultimately using the return value of the last result (the `SELECT @SQL`).
 	    $connection->multi_query($sql);
