@@ -25,7 +25,9 @@ class Transfer {
 		if (!$path || !file_exists($path)) {
 			Common::send("error", "Invalid path.");
 		}
-		if (preg_match("#^[\\\/]?$#i", trim($path)) || preg_match("#[\:*?\"<>\|]#i", $path) || substr_count($path, "./") > 0) {
+		// Only allow downloading of really existing files from the currently open project
+		$projPath = realpath($_SESSION['projectPath']);
+		if ((preg_match("#^[\\\/]?$#i", trim($path)) || preg_match("#[\:*?\"<>\|]#i", $path) || substr_count($path, "./") > 0) && stripos(realpath($path), $projPath) !== 0) {
 			//  Attempting to download all Projects	  or illegal characters in filepaths
 			Common::send("error", "Invalid path.");
 		}
