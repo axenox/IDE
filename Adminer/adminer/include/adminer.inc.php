@@ -800,7 +800,16 @@ class Adminer {
 			set_utf8mb4($create);
 			if ($style && $create) {
 				if ($style == "DROP+CREATE" || $is_view == 1) {
-					echo "DROP " . ($is_view == 2 ? "VIEW" : "TABLE") . " IF EXISTS " . table($table) . ";\n";
+				    switch (true) {
+				        case $is_view === 0 && function_exists('drop_table_sql'):
+				            echo drop_table_sql($table, true) . ";\n";
+				            break;
+				        case $is_view >= 1 && function_exists('drop_view_sql'):
+				            echo drop_view_sql($table, true) . ";\n";
+				            break;
+				        default:
+                            echo "DROP " . ($is_view == 2 ? "VIEW" : "TABLE") . " IF EXISTS " . table($table) . ";\n";
+				    }
 				}
 				if ($is_view == 1) {
 					$create = remove_definer($create);
