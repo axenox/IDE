@@ -1,6 +1,7 @@
 <?php
 namespace axenox\IDE\Common;
 
+use exface\Core\Exceptions\FileNotFoundError;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use exface\Core\DataTypes\StringDataType;
@@ -57,72 +58,130 @@ class AtheosAPI extends InclusionAPI
         }
         
         $headers = $this->getHeadersCommon();
-        if (strcasecmp(FilePathDataType::findExtension($file), 'php') === 0) {
-            $this->createDataFolders();
-            $user = $this->getWorkbench()->getSecurity()->getAuthenticatedUser();
-            
-            // Block certain actions
-            switch (mb_strtolower($_POST['target'] ?? '')) {
-                case 'user':
-                    if ($_POST['action'] !== 'keepAlive') {
-                        return new Response(200, $this->getHeadersCommon());
-                    }
-                    break;
-            }
-            
-            $this->switchSession($user);
-            if (! $this->isLoggedIn($user) || ! file_exists($this->getPathToAtheosData() . 'users.json')) {
-                $app = $app ?? AppFactory::createFromAnything($appSelector, $this->getWorkbench());
-                $this->logIn($user, $app);
-            }
-            
-            $appFolder = str_replace(AliasSelectorInterface::ALIAS_NAMESPACE_DELIMITER, '/', $appSelector);
-            $vendorFolder = FilePathDataType::normalize($this->getWorkbench()->filemanager()->getPathToVendorFolder(), '/');
-            if (strcasecmp($_SESSION['projectPath'], $vendorFolder . '/' . $appFolder) !== 0) {
-                $app = $app ?? AppFactory::createFromAnything($appSelector, $this->getWorkbench());
-                $this->switchProject($app);
-            }
-            
-            if (! $_SESSION["term_auth"]) {
-                $_SESSION["term_auth"] = true;
-            }
-            
-            try {
-                $output = trim($this->includeFile($file));
-            } catch (\Throwable $e) {
-                $this->restoreSession();
-                throw $e;
-            }
-            
-            $this->restoreSession();
-            
-            $headers = headers_list();
-            $headers = array_merge($headers, $this->getHeadersCommon());
-            if (stripos($file, 'controller') !== false && (mb_substr($output, 0, 1) === '[' || mb_substr($output, 0, 1) === '{')) {
-                $headers['Content-Type'] = 'application/json';
-                // There are cases, when Atheos prints multiple JSON objects - see MOD in `Atheos/traits/reply.php`
-                // Need to check if this is the case and just leave the first one.
-                if (false !== ($pos = strpos($output, '}{')) && json_decode($output) === null) {
-                    $output = mb_substr($output, 0, $pos+1);
+        switch (true) {
+            // Custom handler for download action in Atheos. The download did not work. It produced corrupt Excel files but handled images correclty.
+            // It seems, the browser would attempt to download a file multiple times or in multiple streams, but the file is temporary placed in
+            // the WORKSPACE root and deleted after pickup. This resulted in corrupt files or files with 0 size. This workaround will download the
+            // file without involving Atheos. This works. So perhaps some header handling produced issues.
+            case StringDataType::endsWith($innerPath, 'download.php'):
+                $filePath = $request->getQueryParams()['filename'];
+                if (! file_exists($filePath)) {
+                    $this->getWorkbench()->getLogger()->logException(new FileNotFoundError('Attempted to download non-existend file in IDE: "' . $filePath . '"'));
+                    return new Response(404, $headers);
                 }
-            }
-            
-        } else {
-            $output = fopen($base . $file, 'r');
-            switch (FilePathDataType::findExtension($file)) {
-                case 'css':
-                    $contentType = 'text/css';
-                    break;
-                case 'js':
-                     $contentType = 'text/javascript';
-                     break;
-                default:
-                    $contentType = MimeTypeDataType::findMimeTypeOfFile($base . $file);
-                    break;
-            }
-            $headers['Content-Type'] = $contentType;
+                $filePath = realpath($filePath);
+                $folderPath = FilePathDataType::findFolderPath($filePath);
+                // The temporary files for download are put in WORKSPACE root - see Atheos/components/transfer/class.transfer.php and download.php in Atheos
+                // The WORKSPACE is the vendor folder in our case - see Atheos/config.php
+                if ($folderPath !== $this->getWorkbench()->filemanager()->getPathToVendorFolder()) {
+                    $this->getWorkbench()->getLogger()->logException(new FileNotFoundError('Attempted to download file from unexpected location in IDE: "' . $filePath . '"'));
+                    return new Response(404, $headers);
+                }
+                $output = file_get_contents($filePath);
+                $headers = $this->getHeadersCommon();
+                $headers = array_merge($headers,[
+                    'Expires' => 0,
+                    'Cache-Control', 'must-revalidate, post-check=0, pre-check=0',
+                    'Pragma' => 'public',
+                    'Content-Type' => 'application/octet-stream',
+                    'Content-Transfer-Encoding' => 'binary',
+                    'Content-Description' =>  'File Transfer',
+                    'Content-Disposition' => 'attachment; filename=' . FilePathDataType::findFileName($filePath, true)
+                ]);
+                // Delete the temporary file as done in Atheos/components/transfer/download.php
+                @unlink($filePath);
+                break;
+
+            // API calls to .php files
+            case strcasecmp(FilePathDataType::findExtension($file), 'php') === 0:
+                $this->createDataFolders();
+                $user = $this->getWorkbench()->getSecurity()->getAuthenticatedUser();
+                
+                // Block certain actions
+                switch (mb_strtolower($_POST['target'] ?? '')) {
+                    case 'user':
+                        if ($_POST['action'] !== 'keepAlive') {
+                            return new Response(200, $this->getHeadersCommon());
+                        }
+                        break;
+                }
+                
+                $this->switchSession($user);
+                if (! $this->isLoggedIn($user) || ! file_exists($this->getPathToAtheosData() . 'users.json')) {
+                    $app = $app ?? AppFactory::createFromAnything($appSelector, $this->getWorkbench());
+                    $this->logIn($user, $app);
+                }
+                
+                $appFolder = str_replace(AliasSelectorInterface::ALIAS_NAMESPACE_DELIMITER, '/', $appSelector);
+                $vendorFolder = FilePathDataType::normalize($this->getWorkbench()->filemanager()->getPathToVendorFolder(), '/');
+                if (strcasecmp($_SESSION['projectPath'], $vendorFolder . '/' . $appFolder) !== 0) {
+                    $app = $app ?? AppFactory::createFromAnything($appSelector, $this->getWorkbench());
+                    $this->switchProject($app);
+                }
+                
+                if (! $_SESSION["term_auth"]) {
+                    $_SESSION["term_auth"] = true;
+                }
+                
+                try {
+                    $output = trim($this->includeFile($file));
+                } catch (\Throwable $e) {
+                    $this->restoreSession();
+                    throw $e;
+                }
+                
+                $this->restoreSession();
+                
+                // Previously there was a merge of headers here: our default headers were merged with those already sent, but this produced
+                // issues. For example, translations for git messages in the color tatus were not visible.
+                // $headersSent = $this->getHeadersSent();
+                // $headers = array_merge($headersSent, $this->getHeadersCommon())
+                if (stripos($file, 'controller') !== false && (mb_substr($output, 0, 1) === '[' || mb_substr($output, 0, 1) === '{')) {
+                    $headers['Content-Type'] = 'application/json';
+                    // There are cases, when Atheos prints multiple JSON objects - see MOD in `Atheos/traits/reply.php`
+                    // Need to check if this is the case and just leave the first one.
+                    if (false !== ($pos = strpos($output, '}{')) && json_decode($output) === null) {
+                        $output = mb_substr($output, 0, $pos+1);
+                    }
+                }
+                
+                break;
+
+            // Loading other types of files
+            default:
+                $output = fopen($base . $file, 'r');
+                switch (FilePathDataType::findExtension($file)) {
+                    case 'css':
+                        $contentType = 'text/css';
+                        break;
+                    case 'js':
+                        $contentType = 'text/javascript';
+                        break;
+                    default:
+                        $contentType = MimeTypeDataType::findMimeTypeOfFile($base . $file);
+                        break;
+                }
+                $headers['Content-Type'] = $contentType;
         }
         return new Response(200, $headers, $output);
+    }
+
+    protected function getHeadersSent() : array
+    {
+        $headers = [];
+        foreach (headers_list() as $i => $headerLine) {
+            list($header, $val) = explode(":", $headerLine, 2);
+            $val = trim($val);
+            if (! key_exists($header, $headers)) {
+                $headers[$header] = $val;
+            } else {
+                if (! is_array($headers[$header])) {
+                    $headers[$header] = [$headers[$header]];
+                }
+                $headers[$header][] = $val;
+            }
+         }
+         return $headers;
     }
     
     /**

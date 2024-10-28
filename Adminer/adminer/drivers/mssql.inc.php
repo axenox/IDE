@@ -731,6 +731,291 @@ WHERE sys1.xtype = 'TR' AND sys2.name = " . q($table)
 		return array();
 	}
 	
+	/**
+	 * Get SQL command to drop a table
+	 * 
+	 * @param string $table
+	 * @param bool $if_not_exists
+	 * @param bool $drop_constraints
+	 * @return string
+	 */
+	function drop_table_sql($table, $if_not_exists = false, $drop_dependencies = false)
+	{
+	    $t = table($table);
+	    $sql = $if_not_exists ? "IF OBJECT_ID ({$t}, N'U') IS NOT NULL\n" : '';
+	    if (! $drop_dependencies) {
+	       $sql .= "DROP TABLE $t";
+	    } else {
+	       $sql .= "
+BEGIN
+    DECLARE @table NVARCHAR(max) = 'YourTableName';
+    DECLARE @schema NVARCHAR(max) = 'dbo';
+    DECLARE @stmt NVARCHAR(max);
+	-- STEP1: Remove foreign keys to this table
+	-- Cursor to generate ALTER TABLE DROP CONSTRAINT statements  
+	DECLARE cur CURSOR FOR
+		SELECT 'ALTER TABLE ' + OBJECT_SCHEMA_NAME(parent_object_id) + '.' + OBJECT_NAME(parent_object_id) + ' DROP CONSTRAINT ' + name
+		FROM sys.foreign_keys 
+		WHERE OBJECT_SCHEMA_NAME(referenced_object_id) = @schema 
+			AND OBJECT_NAME(referenced_object_id) = @table;
+ 
+   OPEN cur;
+   FETCH cur INTO @stmt;
+	-- Drop each found foreign key constraint 
+	WHILE @@FETCH_STATUS = 0
+		BEGIN
+			EXEC (@stmt);
+			FETCH cur INTO @stmt;
+		END
+	CLOSE cur;
+	DEALLOCATE cur;
+	
+	-- STEP2: remove constraints inside this table
+	SELECT @stmt = '';
+	SELECT @stmt += N'
+ALTER TABLE ' + OBJECT_NAME(parent_object_id) + ' DROP CONSTRAINT ' + OBJECT_NAME(object_id) + ';' 
+	FROM SYS.OBJECTS
+	WHERE TYPE_DESC LIKE '%CONSTRAINT' AND OBJECT_NAME(parent_object_id) = @table AND SCHEMA_NAME(schema_id) = @schema;
+	EXEC(@stmt);
+
+	-- FINALLY drop the table itself
+	DROP TABLE CONCAT(@schema, '.', @table);
+END
+";
+	    }
+	    return $sql;
+	}
+	
+	/**
+	 * Get SQL command to drop a view
+	 * 
+	 * @param string $table
+	 * @param boolean $if_not_exists
+	 * @return string
+	 */
+	function drop_view_sql($table, $if_not_exists = false)
+	{
+	    $t = table($table);
+	    $sql = $if_not_exists ? "IF OBJECT_ID ({$t}, N'V') IS NOT NULL\n" : '';
+	    $sql .= "DROP VIEW $t";
+	    return $sql;
+	}
+	
+	/** 
+	 * Get SQL command to create table
+	 * 
+	 * In the case of MS SQL there is no built-in function to do this, so we use an SQL script from here
+	 * https://stackoverflow.com/questions/706664/generate-sql-create-scripts-for-existing-tables-with-query.
+	 * 
+     * @param string
+     * @param bool
+     * @param string
+     * @return string
+	 */
+	function create_sql($table, $auto_increment, $style) {
+	    global $connection;
+		$tableQuoted = q((get_schema() ? get_schema() . '.' : '') . $table);
+	    $sql = <<<SQL
+
+DECLARE @table_name SYSNAME
+SELECT @table_name = {$tableQuoted}
+
+DECLARE 
+      @object_name SYSNAME
+    , @object_id INT
+
+SELECT 
+      @object_name = '[' + s.name + '].[' + o.name + ']'
+    , @object_id = o.[object_id]
+FROM sys.objects o WITH (NOWAIT)
+JOIN sys.schemas s WITH (NOWAIT) ON o.[schema_id] = s.[schema_id]
+WHERE s.name + '.' + o.name = @table_name
+    AND o.[type] = 'U'
+    AND o.is_ms_shipped = 0
+
+DECLARE @SQL NVARCHAR(MAX) = ''
+
+;WITH index_column AS 
+(
+    SELECT 
+          ic.[object_id]
+        , ic.index_id
+        , ic.is_descending_key
+        , ic.is_included_column
+        , c.name
+    FROM sys.index_columns ic WITH (NOWAIT)
+    JOIN sys.columns c WITH (NOWAIT) ON ic.[object_id] = c.[object_id] AND ic.column_id = c.column_id
+    WHERE ic.[object_id] = @object_id
+),
+fk_columns AS 
+(
+     SELECT 
+          k.constraint_object_id
+        , cname = c.name
+        , rcname = rc.name
+    FROM sys.foreign_key_columns k WITH (NOWAIT)
+    JOIN sys.columns rc WITH (NOWAIT) ON rc.[object_id] = k.referenced_object_id AND rc.column_id = k.referenced_column_id 
+    JOIN sys.columns c WITH (NOWAIT) ON c.[object_id] = k.parent_object_id AND c.column_id = k.parent_column_id
+    WHERE k.parent_object_id = @object_id
+)
+SELECT @SQL = 'CREATE TABLE ' + @object_name + CHAR(13) + '(' + CHAR(13) + STUFF((
+    SELECT CHAR(9) + ', [' + c.name + '] ' + 
+        CASE WHEN c.is_computed = 1
+            THEN 'AS ' + cc.[definition] 
+            ELSE UPPER(tp.name) + 
+                CASE WHEN tp.name IN ('varchar', 'char', 'varbinary', 'binary', 'text')
+                       THEN '(' + CASE WHEN c.max_length = -1 THEN 'MAX' ELSE CAST(c.max_length AS VARCHAR(5)) END + ')'
+                     WHEN tp.name IN ('nvarchar', 'nchar', 'ntext')
+                       THEN '(' + CASE WHEN c.max_length = -1 THEN 'MAX' ELSE CAST(c.max_length / 2 AS VARCHAR(5)) END + ')'
+                     WHEN tp.name IN ('datetime2', 'time2', 'datetimeoffset') 
+                       THEN '(' + CAST(c.scale AS VARCHAR(5)) + ')'
+                    WHEN tp.name IN ('decimal', 'numeric')
+                       THEN '(' + CAST(c.[precision] AS VARCHAR(5)) + ',' + CAST(c.scale AS VARCHAR(5)) + ')'
+                    ELSE ''
+                END +
+                CASE WHEN c.collation_name IS NOT NULL THEN ' COLLATE ' + c.collation_name ELSE '' END +
+                CASE WHEN c.is_nullable = 1 THEN ' NULL' ELSE ' NOT NULL' END +
+                CASE WHEN dc.[definition] IS NOT NULL THEN ' DEFAULT' + dc.[definition] ELSE '' END + 
+                CASE WHEN ic.is_identity = 1 THEN ' IDENTITY(' + CAST(ISNULL(ic.seed_value, '0') AS CHAR(1)) + ',' + CAST(ISNULL(ic.increment_value, '1') AS CHAR(1)) + ')' ELSE '' END 
+        END + CHAR(13)
+    FROM sys.columns c WITH (NOWAIT)
+    JOIN sys.types tp WITH (NOWAIT) ON c.user_type_id = tp.user_type_id
+    LEFT JOIN sys.computed_columns cc WITH (NOWAIT) ON c.[object_id] = cc.[object_id] AND c.column_id = cc.column_id
+    LEFT JOIN sys.default_constraints dc WITH (NOWAIT) ON c.default_object_id != 0 AND c.[object_id] = dc.parent_object_id AND c.column_id = dc.parent_column_id
+    LEFT JOIN sys.identity_columns ic WITH (NOWAIT) ON c.is_identity = 1 AND c.[object_id] = ic.[object_id] AND c.column_id = ic.column_id
+    WHERE c.[object_id] = @object_id
+    ORDER BY c.column_id
+    FOR XML PATH(''), TYPE).value('.', 'NVARCHAR(MAX)'), 1, 2, CHAR(9) + ' ')
+    + ISNULL((SELECT CHAR(9) + ', CONSTRAINT [' + k.name + '] PRIMARY KEY (' + 
+                    (SELECT STUFF((
+                         SELECT ', [' + c.name + '] ' + CASE WHEN ic.is_descending_key = 1 THEN 'DESC' ELSE 'ASC' END
+                         FROM sys.index_columns ic WITH (NOWAIT)
+                         JOIN sys.columns c WITH (NOWAIT) ON c.[object_id] = ic.[object_id] AND c.column_id = ic.column_id
+                         WHERE ic.is_included_column = 0
+                             AND ic.[object_id] = k.parent_object_id 
+                             AND ic.index_id = k.unique_index_id     
+                         FOR XML PATH(N''), TYPE).value('.', 'NVARCHAR(MAX)'), 1, 2, ''))
+            + ')' + CHAR(13)
+            FROM sys.key_constraints k WITH (NOWAIT)
+            WHERE k.parent_object_id = @object_id 
+                AND k.[type] = 'PK'), '') + ')'  + CHAR(13)
+    + ISNULL((SELECT (
+        SELECT CHAR(13) +
+             'ALTER TABLE ' + @object_name + ' WITH' 
+            + CASE WHEN fk.is_not_trusted = 1 
+                THEN ' NOCHECK' 
+                ELSE ' CHECK' 
+              END + 
+              ' ADD CONSTRAINT [' + fk.name  + '] FOREIGN KEY(' 
+              + STUFF((
+                SELECT ', [' + k.cname + ']'
+                FROM fk_columns k
+                WHERE k.constraint_object_id = fk.[object_id]
+                FOR XML PATH(''), TYPE).value('.', 'NVARCHAR(MAX)'), 1, 2, '')
+               + ')' +
+              ' REFERENCES [' + SCHEMA_NAME(ro.[schema_id]) + '].[' + ro.name + '] ('
+              + STUFF((
+                SELECT ', [' + k.rcname + ']'
+                FROM fk_columns k
+                WHERE k.constraint_object_id = fk.[object_id]
+                FOR XML PATH(''), TYPE).value('.', 'NVARCHAR(MAX)'), 1, 2, '')
+               + ')'
+            + CASE 
+                WHEN fk.delete_referential_action = 1 THEN ' ON DELETE CASCADE' 
+                WHEN fk.delete_referential_action = 2 THEN ' ON DELETE SET NULL'
+                WHEN fk.delete_referential_action = 3 THEN ' ON DELETE SET DEFAULT' 
+                ELSE '' 
+              END
+            + CASE 
+                WHEN fk.update_referential_action = 1 THEN ' ON UPDATE CASCADE'
+                WHEN fk.update_referential_action = 2 THEN ' ON UPDATE SET NULL'
+                WHEN fk.update_referential_action = 3 THEN ' ON UPDATE SET DEFAULT'  
+                ELSE '' 
+              END 
+            + CHAR(13) + 'ALTER TABLE ' + @object_name + ' CHECK CONSTRAINT [' + fk.name  + ']' + CHAR(13)
+        FROM sys.foreign_keys fk WITH (NOWAIT)
+        JOIN sys.objects ro WITH (NOWAIT) ON ro.[object_id] = fk.referenced_object_id
+        WHERE fk.parent_object_id = @object_id
+        FOR XML PATH(N''), TYPE).value('.', 'NVARCHAR(MAX)')), '')
+    + ISNULL(((SELECT
+         CHAR(13) + 'CREATE' + CASE WHEN i.is_unique = 1 THEN ' UNIQUE' ELSE '' END 
+                + ' NONCLUSTERED INDEX [' + i.name + '] ON ' + @object_name + ' (' +
+                STUFF((
+                SELECT ', [' + c.name + ']' + CASE WHEN c.is_descending_key = 1 THEN ' DESC' ELSE ' ASC' END
+                FROM index_column c
+                WHERE c.is_included_column = 0
+                    AND c.index_id = i.index_id
+                FOR XML PATH(''), TYPE).value('.', 'NVARCHAR(MAX)'), 1, 2, '') + ')'  
+                + ISNULL(CHAR(13) + 'INCLUDE (' + 
+                    STUFF((
+                    SELECT ', [' + c.name + ']'
+                    FROM index_column c
+                    WHERE c.is_included_column = 1
+                        AND c.index_id = i.index_id
+                    FOR XML PATH(''), TYPE).value('.', 'NVARCHAR(MAX)'), 1, 2, '') + ')', '')  + CHAR(13)
+        FROM sys.indexes i WITH (NOWAIT)
+        WHERE i.[object_id] = @object_id
+            AND i.is_primary_key = 0
+            AND i.[type] = 2
+        FOR XML PATH(''), TYPE).value('.', 'NVARCHAR(MAX)')
+    ), '')
+
+SELECT @SQL
+SQL;
+	    // Since these are multiple statements, use a multi-query and iterate through the results
+	    // ultimately using the return value of the last result (the `SELECT @SQL`).
+	    $connection->multi_query($sql);
+	    do {
+	        $result = $connection->store_result();
+	        $arr = $result->fetch_row();
+	    } while ($connection->next_result());
+	    
+	    /* TODO remove auto-increments here? Where are they in MS SQL anyway?
+	     * This is what was done in mysql.inc.php
+	    if (!$auto_increment) {
+	        $return = preg_replace('~ AUTO_INCREMENT=\d+~', '', $return); //! skip comments
+	    }*/
+	    return $arr[0];
+	}
+	
+	/** Get SQL commands to create triggers
+	 * @param string
+	 * @return string
+	 */
+	function trigger_sql($table) {
+	    /* TODO
+	    $return = "";
+	    foreach (get_rows("SHOW TRIGGERS LIKE " . q(addcslashes($table, "%_\\")), null, "-- ") as $row) {
+	        $return .= "\nCREATE TRIGGER " . idf_escape($row["Trigger"]) . " $row[Timing] $row[Event] ON " . table($row["Table"]) . " FOR EACH ROW\n$row[Statement];;\n";
+	    }
+	    return $return;
+	    */
+	    return '';
+	}
+	
+	/**
+	 * Use named foreign key constraints here to simplify using DDL statements in migrations scripts
+	 * 
+	 * @see editing.inc.php::format_foreign_key()
+	 * 
+	 * @param array $foreign_key
+	 * @return string
+	 */
+	function format_foreign_key($foreign_key) {
+	    global $on_actions;
+	    $db = $foreign_key["db"];
+	    $ns = $foreign_key["ns"];
+	    $fkName = 'FK_' . $foreign_key["source_table"] . '_' . $foreign_key["table"] . '_' . implode('_', $foreign_key["source"]);
+	    return " CONSTRAINT " . $fkName . " FOREIGN KEY (" . implode(", ", array_map('idf_escape', $foreign_key["source"])) . ") REFERENCES "
+	        . ($db != "" && $db != $_GET["db"] ? idf_escape($db) . "." : "")
+	        . ($ns != "" && $ns != $_GET["ns"] ? idf_escape($ns) . "." : "")
+	        . table($foreign_key["table"])
+	        . " (" . implode(", ", array_map('idf_escape', $foreign_key["target"])) . ")" //! reuse $name - check in older MySQL versions
+	        . (preg_match("~^($on_actions)\$~", $foreign_key["on_delete"]) ? " ON DELETE $foreign_key[on_delete]" : "")
+	        . (preg_match("~^($on_actions)\$~", $foreign_key["on_update"]) ? " ON UPDATE $foreign_key[on_update]" : "")
+	        ;
+	}
+	
 	function convert_field($field) {
 	    if (preg_match("~binary~", $field["type"])) {
 	        return "LOWER(CONVERT(VARCHAR(max), " . idf_escape($field["field"]) . ", 1))";
@@ -755,7 +1040,7 @@ WHERE sys1.xtype = 'TR' AND sys2.name = " . q($table)
 	}
 
 	function support($feature) {
-		return preg_match('~^(comment|columns|database|drop_col|indexes|descidx|scheme|sql|table|copy|trigger|view|view_trigger)$~', $feature); //! routine|
+		return preg_match('~^(comment|columns|database|drop_col|indexes|descidx|scheme|sql|table|copy|trigger|view|view_trigger|dump)$~', $feature); //! routine|
 	}
 
 	function driver_config() {
