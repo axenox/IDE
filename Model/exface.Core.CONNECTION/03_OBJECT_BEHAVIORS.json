@@ -57,13 +57,16 @@
     "rows": [
         {
             "CREATED_ON": "2023-01-26 13:15:43",
-            "MODIFIED_ON": "2023-10-04 12:06:49",
+            "MODIFIED_ON": "2024-12-13 15:27:12",
             "CREATED_BY_USER": "0x11e8fe1c902c8ebea23ee4b318306b9a",
             "MODIFIED_BY_USER": "0x31000000000000000000000000000000",
             "UID": "0x11eda567284f5ca4a567025041000001",
             "BEHAVIOR": "exface\/core\/Behaviors\/WidgetModifyingBehavior.php",
             "CONFIG_UXON": {
-                "page_alias": "exface.core.connections",
+                "only_page_roots": true,
+                "only_pages": [
+                    "exface.core.connections"
+                ],
                 "add_buttons": [
                     {
                         "caption": "SQL admin",
@@ -106,7 +109,7 @@
             },
             "OBJECT": "0x33380000000000000000000000000000",
             "APP": "0x11ed96509743e0c29650025041000001",
-            "NAME": "Adminer-button for connections",
+            "NAME": "SQL admin button for connections",
             "DESCRIPTION": "",
             "DISABLED_FLAG": 0,
             "PRIORITY": null
