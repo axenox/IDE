@@ -801,8 +801,11 @@ WHERE sys1.xtype = 'TR' AND sys2.name = " . q($table)
 	 */
 	function drop_table_sql($table, $if_not_exists = false, $drop_dependencies = false)
 	{
-		$ns = $_GET["ns"] != "" ? $_GET["ns"] : 'dbo'; 
-	    $sql = $if_not_exists ? "IF OBJECT_ID ({$t}, N'U') IS NOT NULL\n" : '';
+		$ns = get_schema();
+		if (! $ns) {
+			$ns = 'dbo';
+		} 
+	    $sql = $if_not_exists ? "IF OBJECT_ID ({$ns}.{$table}, N'U') IS NOT NULL\n" : '';
 	    if (! $drop_dependencies) {
 	       $sql .= "DROP TABLE [{$ns}].[{$table}]";
 	    } else {
