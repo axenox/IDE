@@ -71,7 +71,9 @@ if (isset($_GET["download"])) {
 	include "./variables.inc.php";
 } elseif (isset($_GET["script"])) {
 	include "./script.inc.php";
-} elseif (isset($_GET["designer"])) {
+} elseif (isset($_GET["erdiagram"])) {
+    include "./erdiagram.inc.php";
+} elseif (isset($_GET["viewer"])) {
     include "./designer.inc.php";
 } elseif (isset($_GET["viewer"])) {
     include "./designer.inc.php";
