@@ -1,373 +1,273 @@
 <?php
 namespace axenox\IDE\Common;
 
+use exface\Core\CommonLogic\Selectors\DataConnectionSelector;
+use exface\Core\DataTypes\ComparatorDataType;
+use exface\Core\DataTypes\FilePathDataType;
+use exface\Core\DataTypes\JsonDataType;
+use exface\Core\DataTypes\StringDataType;
+use exface\Core\Exceptions\UnexpectedValueException;
+use exface\Core\Factories\DataSheetFactory;
+use GuzzleHttp\Psr7\Response;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use exface\Core\DataTypes\StringDataType;
-use exface\Core\DataTypes\FilePathDataType;
-use exface\Core\DataTypes\MimeTypeDataType;
-use GuzzleHttp\Psr7\Response;
-use exface\Core\DataTypes\JsonDataType;
-use exface\Core\Interfaces\UserInterface;
-use exface\Core\DataTypes\DateTimeDataType;
-use exface\Core\Interfaces\AppInterface;
-use exface\Core\Factories\AppFactory;
-use exface\Core\CommonLogic\Filemanager;
-use exface\Core\Interfaces\Selectors\AliasSelectorInterface;
-use exface\Core\Exceptions\RuntimeException;
-
 class AdminerAPI extends InclusionAPI
 {
-    private $atheosBase = null;
+    const NO_PASSWROD = '12345678';
     
     /**
      * 
      * {@inheritDoc}
-     * @see \axenox\IDE\Common\InclusionAPI::handle()
+     * @see \Psr\Http\Server\RequestHandlerInterface::handle()
      */
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         $path = $request->getUri()->getPath();
         $innerPath = StringDataType::substringAfter($path, $this->getBaseUrlPath(), '');
-        $appSelector = StringDataType::substringBefore($innerPath, '/');
-        $app = null;
-        $file = substr($innerPath, strlen($appSelector)+1);
-        if ($file === '') {
-            $file = 'index.php';
-            $app = AppFactory::createFromAnything($appSelector, $this->getWorkbench());
-            $this->createProject($app);
-        } else {
-            if (mb_stripos($file, '..') !== false) {
-                $this->getWorkbench()->getLogger()->logException(new RuntimeException('Suspicious request to Atheos API blocked: ' . $file));
-                return new Response(404, $this->getHeadersCommon());
+        return $this->runAdminer($innerPath);
+    }
+
+    
+    
+    /**
+     * 
+     * @param array $connectionConfig
+     * @param string $connectorClass
+     * @return array|NULL
+     */
+    protected function getAdminerAuth(array $connectionConfig, string $connectorClass) : ?array
+    {
+        $auth = null;
+        switch (true) {
+            // MySQL, MariaDB
+            case stripos($connectorClass, 'mariadb') !== false:
+            case stripos($connectorClass, 'mysql') !== false:
+                $password = $connectionConfig['password'];
+                if ($password === '' || $password === null) {
+                    $password = AdminerAPI::NO_PASSWROD;
+                }
+                $auth = [
+                    'server' => $connectionConfig['host'] . ($connectionConfig['port'] ? ':' . $connectionConfig['port'] : ''),
+                    'username' => $connectionConfig['user'],
+                    'password' => $password,
+                    'driver' => $this->getAdminerDriver($connectorClass),
+                    'db'    => $connectionConfig['dbase']
+                ];
+                // SSL config
+                if (null !== $sslVal = $connectionConfig['ssl_key'] ?? null) {
+                    $auth['ssl']['key'] = $sslVal;
+                }
+                if (null !== $sslVal = $connectionConfig['ssl_certificate_path'] ?? null) {
+                    $auth['ssl']['cert'] = $this->getPathInWorkbench($sslVal);
+                }
+                if (null !== $sslVal = $connectionConfig['ssl_ca_certificate_path'] ?? null) {
+                    $auth['ssl']['ca'] = $this->getPathInWorkbench($sslVal);
+                }
+                break;
+            // Microsoft SQL Server
+            case stripos($connectorClass, 'mssql') !== false:
+                $password = $connectionConfig['PWD'] ?? $connectionConfig['password'];
+                if ($password === '' || $password === null) {
+                    $password = AdminerAPI::NO_PASSWROD;
+                }
+                $auth = [
+                    'server' => ($connectionConfig['serverName'] ?? $connectionConfig['host']) . ($connectionConfig['port'] ? ':' . $connectionConfig['port'] : ''),
+                    'username' => $connectionConfig['UID'] ?? $connectionConfig['user'],
+                    'password' => $password,
+                    'driver' => $this->getAdminerDriver($connectorClass),
+                    'db'    => $connectionConfig['database'] ?? $connectionConfig['dbase']
+                ];
+                if (array_key_exists('connection_options', $connectionConfig)) {
+                    $auth['server'] .= ';Options=' . json_encode($connectionConfig['connection_options']);
+                }
+        }
+        return $auth;
+    }
+
+    protected function getPathInWorkbench(string $path) : string
+    {
+        if (FilePathDataType::isAbsolute($path)) {
+            return $path;
+        }
+        return $this->getWorkbench()->getInstallationPath() . DIRECTORY_SEPARATOR . $path;
+    }
+    
+    /**
+     *
+     * @param string $connector
+     * @return string|NULL
+     */
+    protected function getAdminerDriver(string $connector) : ?string
+    {
+        $adminerDrivers = [
+            'mysql' => 'server',
+            'sqlite' => 'sqlite', // what is the difference to sqlite2???
+            'pgsql' => 'pgsql',
+            'oracle' => 'oracle',
+            'mssql' => 'mssql',
+            'mongo' => 'mongo',
+            'elastic' => 'elastic'
+        ];
+        
+        foreach ($adminerDrivers as $key => $driver) {
+            if (stripos($connector, $key) !== false) {
+                return $driver;
             }
         }
         
-        $base = $this->getBaseFilePath();
-        // On Azure linux app services the base path has no leading slash for some reason.
-        // Adding it here as a workaround for now
-        if (! FilePathDataType::isAbsolute($base)) {
-            $base = '/' . $base;
+        return null;
+    }
+    
+    /**
+     * 
+     * @return string|NULL
+     */
+    protected function getAdminerDbInSession() : ?string
+    {
+        $pwds = $_SESSION['pwds'];
+        if ($pwds === null) {
+            return null;
         }
-        chdir($base);
-        
-        if (! file_exists($base . $file)) {
-            $this->getWorkbench()->getLogger()->logException(new RuntimeException('IDE file not found: ' . $base . $file));
-            return new Response(404, $this->getHeadersCommon());
-        }
-        
-        $headers = $this->getHeadersCommon();
-        if (strcasecmp(FilePathDataType::findExtension($file), 'php') === 0) {
-            $this->createDataFolders();
-            $user = $this->getWorkbench()->getSecurity()->getAuthenticatedUser();
-            
-            // Block certain actions
-            switch (mb_strtolower($_POST['target'] ?? '')) {
-                case 'user':
-                    if ($_POST['action'] !== 'keepAlive') {
-                        return new Response(200, $this->getHeadersCommon());
-                    }
-                    break;
-            }
-            
-            $this->switchSession($user);
-            if (! $this->isLoggedIn($user) || ! file_exists($this->getPathToAtheosData() . 'users.json')) {
-                $app = $app ?? AppFactory::createFromAnything($appSelector, $this->getWorkbench());
-                $this->logIn($user, $app);
-            }
-            
-            $vendorFolder = str_replace(AliasSelectorInterface::ALIAS_NAMESPACE_DELIMITER, '/', $appSelector);
-            if (! StringDataType::endsWith($_SESSION['projectPath'], $vendorFolder, false)) {
-                $app = $app ?? AppFactory::createFromAnything($appSelector, $this->getWorkbench());
-                $this->switchProject($app);
-            }
-            
-            if (! $_SESSION["term_auth"]) {
-                $_SESSION["term_auth"] = true;
-            }
-            
-            try {
-                $output = trim($this->includeFile($file));
-            } catch (\Throwable $e) {
-                $this->restoreSession();
-                throw $e;
-            }
-            
-            $this->restoreSession();
-            
-            $headers = headers_list();
-            $headers = array_merge($headers, $this->getHeadersCommon());
-            if (stripos($file, 'controller') !== false && (mb_substr($output, 0, 1) === '[' || mb_substr($output, 0, 1) === '{')) {
-                $headers['Content-Type'] = 'application/json';
-                // There are cases, when Atheos prints multiple JSON objects - see MOD in `Atheos/traits/reply.php`
-                // Need to check if this is the case and just leave the first one.
-                if (false !== ($pos = strpos($output, '}{')) && json_decode($output) === null) {
-                    $output = mb_substr($output, 0, $pos+1);
+        $servers = $pwds['server'];
+        $serverName = null;
+        foreach ($servers as $serverName => $serverData) {
+            foreach ($serverData as $userName => $userData) {
+                if (! empty($userData)) {
+                    return $serverName;
                 }
             }
+        }
+        return null;
+    }
+    
+    /**
+     * 
+     * @param string $pathInFacade
+     * @throws UnexpectedValueException
+     * @return ResponseInterface
+     */
+    protected function runAdminer(string $pathInFacade) : ResponseInterface
+    {
+        if (StringDataType::startsWith($pathInFacade, 'externals/')) {
+            $pathInFacade = 'adminer/' . $pathInFacade;
+        }
+        $target = StringDataType::substringAfter($pathInFacade, 'adminer/');
+        $selector = rtrim($target, '/');
+        $base = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'Adminer' . DIRECTORY_SEPARATOR;
+        $baseSrc = $base . 'src' . DIRECTORY_SEPARATOR;
+        $baseSrcAdminer = $base . 'adminer' . DIRECTORY_SEPARATOR;
+        switch (true) {
+            case file_exists($baseSrc . $selector):
+            case file_exists($baseSrcAdminer . $selector):
+                $file = $selector;
+                $stream = fopen($baseSrcAdminer.$file, 'r');
+                switch (FilePathDataType::findExtension($file)) {
+                    // read css-file
+                    case 'css':
+                        $mimeType = 'text/css';
+                        break;
+                        // read different file
+                    case 'js':
+                        $mimeType = 'text/javascript';
+                        break;
+                        // read different file
+                    Default:
+                        $mimeType = mime_content_type($base.$file);
+                        break;
+                }
+                $headers = $this->getHeadersCommon();
+                $headers['Content-Type'] = $mimeType;
+                return new Response(200, $headers, $stream);
+            case ! file_exists($base . $selector):   
+                switch (true) {
+                    case isset($_POST['logout']):
+                        $_GET = [];
+                        $_POST = [];
+                        break;
+                    case !count($_GET):
+                        // adminer/localhost/ -> localhost
+                        $dataSheet = DataSheetFactory::createFromObjectIdOrAlias($this->getWorkbench(), 'exface.Core.CONNECTION');
+                        $dataSheet->getFilters()->addConditionFromString('ALIAS_WITH_NS', $selector, ComparatorDataType::EQUALS);
+                        $dataSheet->getColumns()->addMultiple([
+                            'CONFIG',
+                            'CONNECTOR',
+                            'UID',  
+                        ]);
+                        
+                        $dataSheet->dataRead();
+                        
+                        if (strcasecmp($selector, DataConnectionSelector::METAMODEL_CONNECTION_ALIAS) === 0 || strcasecmp($selector, DataConnectionSelector::METAMODEL_CONNECTION_UID) === 0) {
+                            $config = $this->getWorkbench()->getCoreApp()->getConfig()->getOption('METAMODEL.CONNECTOR_CONFIG')->toArray();
+                            $connector = $this->getWorkbench()->getCoreApp()->getConfig()->getOption('METAMODEL.CONNECTOR');
+                        } else {
+                            $row = $dataSheet->getRowsDecrypted()[0] ?? null;
+                            if ($row === null) {
+                                throw new UnexpectedValueException('Data connection "' . $selector . '" not found!');
+                            }
+                            
+                            if ($row['CONFIG'] ?? null) {
+                                $config = JsonDataType::decodeJson($row['CONFIG']);
+                            } else {
+                                $config = [];
+                            }
+                            $connector = $row['CONNECTOR'];
+                        }
+                        
+                        $_POST['auth'] = $this->getAdminerAuth($config, $connector);
+                        break;
+                }
+                
+                // open Adminer
+                $html = $this->launchAdminer();
+                // IDEA replacing X-Frme-Options did not work well. Sometimes the headers are sent earlier.
+                // How to prevent sending headers??? Override header() function somehow?
+                // remove Adminer denial of integration into iBrowser
+                // header_remove('X-Frame-Options');
+                $headers = headers_list();
+                $headers = array_merge($headers, $this->getHeadersCommon());
+                return new Response(200, $headers, $html);
             
-        } else {
-            $output = fopen($base . $file, 'r');
-            switch (FilePathDataType::findExtension($file)) {
-                case 'css':
-                    $contentType = 'text/css';
-                    break;
-                case 'js':
-                     $contentType = 'text/javascript';
-                     break;
-                default:
-                    $contentType = MimeTypeDataType::findMimeTypeOfFile($base . $file);
-                    break;
-            }
-            $headers['Content-Type'] = $contentType;
+                
+            // read different files    
+            default:
+                $file = $selector;
+                $stream = fopen($base.$file, 'r');
+                switch (FilePathDataType::findExtension($file)) {
+                    // read css-file
+                    case 'css':
+                        $mimeType = 'text/css';
+                        break;
+                        // read different file
+                    case 'js':
+                        $mimeType = 'text/javascript';
+                        break;
+                        // read different file
+                    Default:
+                        $mimeType = mime_content_type($base.$file);
+                        break;
+                }
+                $headers = $this->getHeadersCommon();
+                $headers['Content-Type'] = $mimeType;
+                return new Response(200, $headers, $stream);
         }
-        return new Response(200, $headers, $output);
     }
     
     /**
      * 
-     * {@inheritDoc}
-     * @see \axenox\IDE\Common\InclusionAPI::includeFile()
+     * @return string|NULL
      */
-    protected function includeFile(string $pathRelativeToBase) : string
+    protected function launchAdminer() : ?string
     {
-        global $i18n; 
-        global $components; 
-        global $libraries; 
-        global $plugins;
-        
-        try {
-            ob_start();
-            require $pathRelativeToBase;
-            $output = ob_get_contents();
-            ob_end_clean();
-        } catch (\Throwable $e) {
-            throw new RuntimeException('Error in Atheos IDE: ' . $e->getMessage(), null, $e);
-        }
+        global $adminer;
+        $workbench = $this->getWorkbench();
+        ob_start();
+        session_start();
+        $cwd = getcwd();
+        chdir(__DIR__ . '/../Adminer/');
+        require 'adminer.php';
+        $output = ob_get_contents();
+        ob_end_clean();
+        chdir($cwd);
         return $output;
-    }
-    
-    /**
-     * 
-     * {@inheritDoc}
-     * @see \axenox\IDE\Common\InclusionAPI::isLoggedIn()
-     */
-    protected function isLoggedIn(UserInterface $user) : bool
-    {
-        return $user->getUsername() === $_SESSION['user'];
-    }
-    
-    /**
-     * 
-     * {@inheritDoc}
-     * @see \axenox\IDE\Common\InclusionAPI::logIn()
-     */
-    protected function logIn(UserInterface $user, AppInterface $app = null) : InclusionAPI
-    {
-        $this->createUser($user, $app);
-        
-        $this->runController('user', 'authenticate', [
-            'username' => $user->getUsername(),
-            'password' => $this->getAtheosPassword($user),
-            'language' => 'en',
-            'remember' => 'on'
-        ]);        
-        
-        return $this;
-    }
-    
-    /**
-     * 
-     * @param AppInterface $app
-     * @return AtheosAPI
-     */
-    protected function switchProject(AppInterface $app) : AdminerAPI
-    {
-        $this->runController('project', 'open', [
-            'projectName' => $app->getName(),
-            'projectPath' => $this->getProjectPath($app)
-        ]);
-        return $this;
-    }
-    
-    /**
-     * 
-     * @param string $target
-     * @param string $action
-     * @param array $postVars
-     * @return array
-     */
-    protected function runController(string $target, string $action, array $postVars = []) : array
-    {
-        $_POST['target'] = $target;
-        $_POST['action'] = $action;
-        foreach ($postVars as $var => $val) {
-            $_POST[$var] = $val;
-        }
-        
-        $output = $this->includeFile('controller.php');
-        if ($output) {
-            try {
-                $result = JsonDataType::decodeJson($output);
-            } catch (\Throwable $e) {
-                throw new RuntimeException('Error in Atheos IDE: ' . $e->getMessage(), null, $e);
-            }
-            if ($result['status'] === 'error') {
-                throw new RuntimeException('Error in Atheos IDE: ' . $result['text'] . '. Response: ' . JsonDataType::encodeJson($result));
-            }
-        } else {
-            $result = [];
-        }
-        
-        unset($_POST['target']);
-        unset($_POST['action']);
-        foreach (array_keys($postVars) as $var) {
-            unset($_POST[$var]);
-        }
-        
-        return $result;
-    }
-    
-    protected function getPathToAtheosData() : string
-    {
-        return $this->getWorkbench()->filemanager()->getPathToDataFolder()
-            . DIRECTORY_SEPARATOR . 'axenox'
-            . DIRECTORY_SEPARATOR . 'IDE'
-            . DIRECTORY_SEPARATOR . 'Atheos'
-            . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR;
-    }
-    
-    /**
-     * 
-     * @return string
-     */
-    protected function getPathToAtheosUsers() : string
-    {
-        return $this->getPathToAtheosData() . 'users' . DIRECTORY_SEPARATOR;
-    }
-    
-    protected function getAtheosUsers() : array
-    {
-        return $this->getAtheosData('users.json');
-    }
-    
-    protected function getAtheosProjects() : array
-    {
-        return $this->getAtheosData('projects.db.json');
-    }
-    
-    protected function getAtheosData(string $filename) : array
-    {
-        $dataPath = $this->getPathToAtheosData();
-        $filenamePath = $dataPath . $filename;
-        if (! file_exists($filenamePath)) {
-            return [];
-        }
-        $json = file_get_contents($filenamePath);
-        if (! $json) {
-            return [];
-        }
-        return JsonDataType::decodeJson($json);
-    }
-    
-    protected function setAtheosUsers(array $userData) : AdminerAPI
-    {
-        $dataPath = $this->getPathToAtheosData();
-        $this->getWorkbench()->filemanager()->dumpFile($dataPath . 'users.json', JsonDataType::encodeJson($userData, true));
-        return $this;
-    }
-    
-    protected function createProject(AppInterface $app) : AdminerAPI
-    {
-        $dataDir = $this->getPathToAtheosData();
-        $projects = $this->getAtheosProjects();
-        $appPath = $this->getProjectPath($app);
-        foreach ($projects as $name => $projectPath) {
-            // TODO rename project if names do not match
-            if ($projectPath === $appPath) {
-                return $this;
-            }
-        }
-        $projects[$app->getName()] = $appPath;
-        $this->getWorkbench()->filemanager()->dumpFile($dataDir . 'projects.db.json', JsonDataType::encodeJson($projects, true));
-        return $this;
-    }
-    
-    protected function getProjectPath(AppInterface $app) : string{
-        return FilePathDataType::normalize($app->getDirectoryAbsolutePath(), '/');
-    }
-    
-    protected function getAtheosPassword(UserInterface $user) : string
-    {
-        return $user->getPassword() ? $user->getPassword() : $user->getUid();
-    }
-    
-    protected function createUser(UserInterface $user, AppInterface $activeProject) : AdminerAPI
-    {
-        $users = $this->getAtheosUsers();
-        $userData = $users[$user->getUsername()] ?? null;
-        if ($userData === null) {
-            $users[$user->getUsername()] = [
-                "password" => password_hash($this->getAtheosPassword($user), PASSWORD_DEFAULT),
-                "resetPassword" => false,
-                "activeProject" => $this->getProjectPath($activeProject),
-                "activePath" => $this->getProjectPath($activeProject),
-                "creationDate" => DateTimeDataType::now(),
-                "lastLogin" => DateTimeDataType::now(),
-                "permissions" => [
-                    "configure",
-                    "read",
-                    "write"
-                ],
-                "userACL" => "full"
-            ];
-        } else {
-            $users[$user->getUsername()] = [
-                "password" => password_hash($this->getAtheosPassword($user), PASSWORD_DEFAULT),
-                "resetPassword" => false,
-                "activeProject" => $this->getProjectPath($activeProject),
-                "activePath" => $this->getProjectPath($activeProject),
-                "creationDate" => DateTimeDataType::now(),
-                "lastLogin" => DateTimeDataType::now(),
-                "permissions" => [
-                    "configure",
-                    "read",
-                    "write"
-                ],
-                "userACL" => "full"
-            ];
-        }
-        
-        $this->setAtheosUsers($users);
-        
-        $usersPath = $this->getPathToAtheosUsers();
-        $codeGitFile = $usersPath . $user->getUsername() . DIRECTORY_SEPARATOR . 'codegit.db.json';
-        if (file_exists($codeGitFile)) {
-            $codeGitJson = file_get_contents($codeGitFile);
-            $codeGitData = JsonDataType::decodeJson($codeGitJson ? $codeGitJson : '[]');
-        } else {
-            Filemanager::pathConstruct($usersPath . $user->getUsername());
-            $codeGitData = [
-                [
-                    "user" => $user->getUsername(),
-                    "path" => "global",
-                    "name" => $user->getFirstName() . ' ' . $user->getLastName(),
-                    "email" => $user->getEmail()
-                ]
-            ];
-        }
-        $this->getWorkbench()->filemanager()->dumpFile($codeGitFile, JsonDataType::encodeJson($codeGitData, true));
-        return $this;
-    }
-    
-    protected function createDataFolders() : AdminerAPI
-    {
-        if (! file_exists($this->getPathToAtheosData())) {
-            Filemanager::pathConstruct($this->getPathToAtheosData());
-        }
-        if (! file_exists($this->getPathToAtheosUsers())) {
-            Filemanager::pathConstruct($this->getPathToAtheosUsers());
-        }
-        return $this;
     }
 }
