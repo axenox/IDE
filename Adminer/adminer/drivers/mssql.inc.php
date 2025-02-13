@@ -1,4 +1,6 @@
 <?php
+
+use Psr\SimpleCache\CacheInterface;
 /**
 * @author Jakub Cernohuby
 * @author Vladimir Stastka
@@ -387,7 +389,22 @@ if (isset($_GET["mssql"])) {
 		return true;
 	}
 
+	function cache_get_table_key(string $table, string $schema = null): string 
+	{
+		return 'table--' . ($schema ? $schema : get_schema()) . '.' . $table;
+	}
+
+	function cache() : CacheInterface
+	{
+		global $workbench;
+		return $workbench->getCache()->getPool('adminer');
+	}
 	function fields($table) {
+		$ns = get_schema() != "" ? get_schema() : 'dbo';
+		$cacheKey = cache_get_table_key($table, $ns);
+		if (cache()->has($cacheKey)) {
+			cache()->get($cacheKey);
+		}
 		$comments = get_key_vals("SELECT objname, cast(value as varchar(max)) FROM fn_listextendedproperty('MS_DESCRIPTION', 'schema', " . q(get_schema()) . ", 'table', " . q($table) . ", 'column', NULL)");
 		$return = array();
 		foreach (get_rows("SELECT c.max_length, c.precision, c.scale, c.name, c.is_nullable, c.is_identity, c.collation_name, t.name type, CAST(d.definition as text) [default]
@@ -395,7 +412,7 @@ FROM sys.all_columns c
 JOIN sys.all_objects o ON c.object_id = o.object_id
 JOIN sys.types t ON c.user_type_id = t.user_type_id
 LEFT JOIN sys.default_constraints d ON c.default_object_id = d.parent_column_id
-WHERE o.schema_id = SCHEMA_ID(" . q(get_schema()) . ") AND o.type IN ('S', 'U', 'V') AND o.name = " . q($table)
+WHERE o.schema_id = SCHEMA_ID(" . q($ns) . ") AND o.type IN ('S', 'U', 'V') AND o.name = " . q($table)
 		) as $row) {
 			$type = $row["type"];
 			$length = (preg_match("~char|binary~", $type) ? $row["max_length"] : ($type == "decimal" ? "$row[precision],$row[scale]" : ""));
@@ -421,6 +438,7 @@ WHERE o.schema_id = SCHEMA_ID(" . q(get_schema()) . ") AND o.type IN ('S', 'U', 
 				"comment" => $comments[$row["name"]],
 			);
 		}
+		cache()->set($cacheKey, $return);
 		return $return;
 	}
 
@@ -482,6 +500,7 @@ WHERE OBJECT_NAME(i.object_id) = " . q($table)
 			queries("ALTER DATABASE " . idf_escape(DB) . " COLLATE $collation");
 		}
 		queries("ALTER DATABASE " . idf_escape(DB) . " MODIFY NAME = " . idf_escape($name));
+		cache()->clear();
 		return true; //! false negative "The database name 'test2' has been set."
 	}
 
@@ -603,6 +622,7 @@ SQL;
 			queries("EXEC sp_dropextendedproperty @name = N'MS_Description', @level0type = N'Schema', @level0name = " . q(get_schema()) . ", @level1type = N'Table', @level1name = " . q($name) . ", @level2type = N'Column', @level2name = " . q($key));
 			queries("EXEC sp_addextendedproperty @name = N'MS_Description', @value = " . $comment . ", @level0type = N'Schema', @level0name = " . q(get_schema()) . ", @level1type = N'Table', @level1name = " . q($name) . ", @level2type = N'Column', @level2name = " . q($key));
 		}
+		cache()->clear();
 		return true;
 	}
 
@@ -623,6 +643,7 @@ SQL;
 				return false;
 			}
 		}
+		cache()->clear();
 		return (!$index || queries("DROP INDEX " . implode(", ", $index)))
 			&& (!$drop || queries("ALTER TABLE " . table($table) . " DROP " . implode(", ", $drop)))
 		;
@@ -668,14 +689,17 @@ SQL;
 	}
 
 	function drop_views($views) {
+		cache()->clear();
 		return queries("DROP VIEW " . implode(", ", array_map('table', $views)));
 	}
 
 	function drop_tables($tables) {
+		cache()->clear();
 		return queries("DROP TABLE " . implode(", ", array_map('table', $tables)));
 	}
 
 	function move_tables($tables, $views, $target) {
+		cache()->clear();
 		return apply_queries("ALTER SCHEMA " . idf_escape($target) . " TRANSFER", array_merge($tables, $views));
 	}
 	
@@ -719,6 +743,7 @@ EXEC('ALTER TABLE {$targetTableFull} ADD CONSTRAINT PK_{$targetTableName} PRIMAR
 	        $connection->error = 'Cannot copy views in Microsoft SQL';
 	        return false;
 	    }
+		cache()->clear();
 	    return true;
 	}
 
