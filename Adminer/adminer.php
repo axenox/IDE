@@ -2,7 +2,8 @@
 
 function adminer_object() {
     global $adminer;
-	    
+	global $workbench;
+    
     // required to run any plugin
     require_once "../plugins/plugin.php";
     
