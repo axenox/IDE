@@ -345,7 +345,10 @@ MD;
 				if (isEntity){
 					// ENTITY tooltip/menu
 					//console.log("LOC:"+window.location);
-					let tableName = target.id.toString().split('-')[1];  // get table name
+
+					// get table name from svg table title
+					const tableName = target.querySelector('text').textContent;  
+
 					let baseUrl = window.location.toString();
 					baseUrl = baseUrl.replace("&erdiagram=", "&");
 
@@ -450,7 +453,7 @@ MD;
 				y: -(y*rz)+(panZoom.getSizes().height/2)
 				});
 
-				panZoom.zoomBy(1.5); //150% zoom - todo adapt (?)
+				panZoom.zoomBy(1.5); //150% zoom - adapt (?)
 			}
 
 
