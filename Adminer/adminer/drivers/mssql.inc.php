@@ -505,7 +505,17 @@ WHERE OBJECT_NAME(i.object_id) = " . q($table)
 	}
 
 	function auto_increment() {
-		return " IDENTITY" . ($_POST["Auto_increment"] != "" ? "(" . number($_POST["Auto_increment"]) . ",1000)" : "") . " PRIMARY KEY";
+		$incCol = $_POST['auto_increment_col'];
+		// If the auto-increment is used AND the column has a default, use that as the start value of the
+		// auto-increment
+		if ($incCol && $incFields = $_POST['fields'][$incCol] ?? null) {
+			if (($incStart = $incFields['default']) && is_numeric($incStart)) {
+				$_POST["Auto_increment"] = intval($incStart);
+				unset($_POST['fields'][$incCol]['has_default']);
+				$_POST['fields'][$incCol]['default'] = '';
+			}
+		}
+		return " IDENTITY" . ($_POST["Auto_increment"] != "" ? "(" . number($_POST["Auto_increment"]) . ",1)" : "") . " PRIMARY KEY";
 	}
 
 	function alter_table($table, $name, $fields, $foreign, $comment, $engine, $collation, $auto_increment, $partitioning) {
