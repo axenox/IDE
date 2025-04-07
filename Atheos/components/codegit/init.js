@@ -74,6 +74,9 @@
 					} else if (target.attr('data-button') === 'undo') {
 						self.undo(self.activeRepo, target.parent('[data-file]').attr('data-file'));
 					}
+					else if (target.attr('data-button') === 'showOverview') {
+						self.showOverview();
+					}
 				}
 			});
 
@@ -392,6 +395,10 @@
 					'Cancel': function() {}
 				}
 			});
+		},
+
+		showOverview: function() {
+			self.showPanel('overview', self.activeRepo);
 		},
 
 		transfer: function(type) {
