@@ -75,7 +75,7 @@
 						self.undo(self.activeRepo, target.parent('[data-file]').attr('data-file'));
 					}
 					else if (target.attr('data-button') === 'showOverview') {
-						self.showOverview();
+						self.showPanel('overview', self.activeRepo);
 					}
 				}
 			});
@@ -157,6 +157,10 @@
 				action: 'codegit',
 				repo
 			});
+
+			// on load, clear previous selections
+			window.overviewScrollPos = 0;
+			window.checkedFiles = {};
 		},
 
 		showPanel: function(panel, repo, data) {
@@ -172,13 +176,71 @@
 				data.panel = panel;
 				data.repo = repo;
 
+				// if navigating away from overview tab, save current selection and scroll position 
+				if (panel !== 'overview'){
+					let checkboxes = oX('#codegit_overview tbody').findAll('input[type="checkbox"]');
+					if (checkboxes){
+						// clear previous values
+						window.overviewScrollPos = 0;
+						window.checkedFiles = {};
+
+						// save file selection
+						checkboxes.forEach((checkbox) => {
+							if (checkbox.prop('checked')) {
+								let filename = checkbox.parent('tr').attr('data-file');
+								window.checkedFiles[filename] = "checked";
+							}
+						});
+
+						// save scroll position
+						let scrollDiv = document.querySelector('#codegit_overview tbody');
+						if(scrollDiv){
+							let scrollPos = scrollDiv.scrollTop;
+							if (scrollPos && scrollPos >= 0){
+								window.overviewScrollPos = scrollPos;
+							}
+						}
+					}
+					
+				}
+
 				echo({
 					url: atheos.dialog,
 					data: data,
 					success: function(reply) {
 						oX('panel').html(reply);
+
+						if (panel === 'overview'){
+							// keep previous selection when changing panels to overview
+							// and restore scroll position
+							let checkboxes = document.querySelectorAll('#codegit_overview tbody input[type="checkbox"]');
+
+							// restore checked files
+							if (checkboxes){
+								checkboxes.forEach((checkbox) => {
+									if(checkbox.closest('tr').getAttribute('data-file') in window.checkedFiles){
+										checkbox.checked = true;
+									}
+								});
+							}
+
+							// restore scroll position if valid
+							let scrollDiv = document.querySelector('#codegit_overview tbody');
+							if(scrollDiv){
+								if (window.overviewScrollPos){
+									let storedScrollPos = window.overviewScrollPos;
+
+									if (!isNaN(storedScrollPos) && storedScrollPos >= 0) {
+										if (storedScrollPos <= scrollDiv.scrollHeight - scrollDiv.clientHeight) {
+											scrollDiv.scrollTop =  Number(storedScrollPos);
+										} 
+									}
+								}
+							}
+						}
 					}
 				});
+				
 			}
 		},
 
@@ -283,6 +345,14 @@
 								checkbox.parent('tr').remove();
 							}
 						});
+
+						// on success, clear saved data and reset scroll
+						window.overviewScrollPos = 0;
+						window.checkedFiles = {};
+						let scrollDiv = document.querySelector('#codegit_overview tbody');
+						if(scrollDiv){
+							scrollDiv.scrollTop =  0;
+						}
 					}
 				}
 			});
@@ -395,10 +465,6 @@
 					'Cancel': function() {}
 				}
 			});
-		},
-
-		showOverview: function() {
-			self.showPanel('overview', self.activeRepo);
 		},
 
 		transfer: function(type) {
