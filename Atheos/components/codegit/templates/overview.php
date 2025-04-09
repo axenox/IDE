@@ -29,7 +29,7 @@
 								<input group="cg_overview" type="checkbox" class="large">
 							</td>
 							<td class="<?php echo $key ?>"><?php echo $key ?></td>
-							<td class="file"><?php echo $file ?></td>
+							<td class="file"><?php echo $file ?><?php if ($key === 'untracked' && str_ends_with($file, '/')){ echo '  (dir)';} ?></td>
 							<td>
 								<button class="git_diff" data-button="diff"><?php echo i18n("git_objects_actions_diff") ?></button>
 								<button class="git_undo" data-button="undo"><?php echo i18n("git_objects_actions_undo") ?></button>
