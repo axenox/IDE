@@ -19,7 +19,7 @@ foreach ($diffs as $i => $diff) {
 
 	$element = $files[$i];
 	$filename = pathinfo($element, PATHINFO_BASENAME);
-	echo "<h4 class=\"file-info\">File Name: $filename<span class=\"actions\" data-file=\"$element\" style=\"float:right;\"><button data-button=\"showOverview\">" . "<i class=\"fas fa-arrow-circle-left\"></i>" . "</button><button class=\"git_undo\" data-button=\"undo\">" . i18n("git_objects_actions_undo") . "</button></span></h4>";
+	echo "<h4 class=\"file-info\">File Name: $filename<span class=\"actions\" data-file=\"$element\" style=\"float:right;\"><button data-button=\"showOverview\">&#129144;</button><button class=\"git_undo\" data-button=\"undo\">" . i18n("git_objects_actions_undo") . "</button></span></h4>";
 	echo "<ul>";
 
 	$lineNumber = 1;
