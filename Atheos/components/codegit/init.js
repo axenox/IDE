@@ -161,6 +161,7 @@
 			// on load, clear previous selections
 			window.overviewScrollPos = 0;
 			window.checkedFiles = {};
+			window.commitMessage = "";
 		},
 
 		showPanel: function(panel, repo, data) {
@@ -183,6 +184,7 @@
 						// clear previous values
 						window.overviewScrollPos = 0;
 						window.checkedFiles = {};
+						window.commitMessage = "";
 
 						// save file selection
 						checkboxes.forEach((checkbox) => {
@@ -199,6 +201,11 @@
 							if (scrollPos && scrollPos >= 0){
 								window.overviewScrollPos = scrollPos;
 							}
+						}
+
+						let commitMessageInput = document.getElementById('commit_message');
+						if(commitMessageInput){
+							window.commitMessage = commitMessageInput.value;
 						}
 					}
 					
@@ -236,6 +243,12 @@
 										} 
 									}
 								}
+							}
+
+							// restore commit message if stored
+							let commitMessageInput = document.getElementById('commit_message');
+							if(commitMessageInput && window.commitMessage && window.commitMessage.length > 0){
+								commitMessageInput.value = window.commitMessage;
 							}
 						}
 					}
@@ -349,6 +362,7 @@
 						// on success, clear saved data and reset scroll
 						window.overviewScrollPos = 0;
 						window.checkedFiles = {};
+						window.commitMessage = "";
 						let scrollDiv = document.querySelector('#codegit_overview tbody');
 						if(scrollDiv){
 							scrollDiv.scrollTop =  0;
