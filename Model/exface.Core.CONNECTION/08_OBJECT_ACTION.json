@@ -65,7 +65,7 @@
     ],
     "rows": [
         {
-            "_EXPORT_SUMMARY": "Data Connection: SQL admin",
+            "_EXPORT_SUMMARY": "Data Connection: SQL admin [ConnectionSqlAdmin]",
             "CREATED_ON": "2024-12-13 22:00:03",
             "MODIFIED_ON": "2024-12-13 22:02:05",
             "CREATED_BY_USER": "0x31000000000000000000000000000000",
