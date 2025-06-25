@@ -1,4 +1,6 @@
 <?php
+
+use Psr\SimpleCache\CacheInterface;
 /**
 * @author Jakub Cernohuby
 * @author Vladimir Stastka
@@ -387,7 +389,22 @@ if (isset($_GET["mssql"])) {
 		return true;
 	}
 
+	function cache_get_table_key(string $table, string $schema = null): string 
+	{
+		return 'table--' . ($schema ? $schema : get_schema()) . '.' . $table;
+	}
+
+	function cache() : CacheInterface
+	{
+		global $workbench;
+		return $workbench->getCache()->getPool('adminer');
+	}
 	function fields($table) {
+		$ns = get_schema() != "" ? get_schema() : 'dbo';
+		$cacheKey = cache_get_table_key($table, $ns);
+		if (cache()->has($cacheKey)) {
+			cache()->get($cacheKey);
+		}
 		$comments = get_key_vals("SELECT objname, cast(value as varchar(max)) FROM fn_listextendedproperty('MS_DESCRIPTION', 'schema', " . q(get_schema()) . ", 'table', " . q($table) . ", 'column', NULL)");
 		$return = array();
 		foreach (get_rows("SELECT c.max_length, c.precision, c.scale, c.name, c.is_nullable, c.is_identity, c.collation_name, t.name type, CAST(d.definition as text) [default]
@@ -395,7 +412,7 @@ FROM sys.all_columns c
 JOIN sys.all_objects o ON c.object_id = o.object_id
 JOIN sys.types t ON c.user_type_id = t.user_type_id
 LEFT JOIN sys.default_constraints d ON c.default_object_id = d.parent_column_id
-WHERE o.schema_id = SCHEMA_ID(" . q(get_schema()) . ") AND o.type IN ('S', 'U', 'V') AND o.name = " . q($table)
+WHERE o.schema_id = SCHEMA_ID(" . q($ns) . ") AND o.type IN ('S', 'U', 'V') AND o.name = " . q($table)
 		) as $row) {
 			$type = $row["type"];
 			$length = (preg_match("~char|binary~", $type) ? $row["max_length"] : ($type == "decimal" ? "$row[precision],$row[scale]" : ""));
@@ -421,6 +438,7 @@ WHERE o.schema_id = SCHEMA_ID(" . q(get_schema()) . ") AND o.type IN ('S', 'U', 
 				"comment" => $comments[$row["name"]],
 			);
 		}
+		cache()->set($cacheKey, $return);
 		return $return;
 	}
 
@@ -482,10 +500,21 @@ WHERE OBJECT_NAME(i.object_id) = " . q($table)
 			queries("ALTER DATABASE " . idf_escape(DB) . " COLLATE $collation");
 		}
 		queries("ALTER DATABASE " . idf_escape(DB) . " MODIFY NAME = " . idf_escape($name));
+		cache()->clear();
 		return true; //! false negative "The database name 'test2' has been set."
 	}
 
 	function auto_increment() {
+		$incCol = $_POST['auto_increment_col'];
+		// If the auto-increment is used AND the column has a default, use that as the start value of the
+		// auto-increment
+		if ($incCol && $incFields = $_POST['fields'][$incCol] ?? null) {
+			if (($incStart = $incFields['default']) && is_numeric($incStart)) {
+				$_POST["Auto_increment"] = intval($incStart);
+				unset($_POST['fields'][$incCol]['has_default']);
+				$_POST['fields'][$incCol]['default'] = '';
+			}
+		}
 		return " IDENTITY" . ($_POST["Auto_increment"] != "" ? "(" . number($_POST["Auto_increment"]) . ",1)" : "") . " PRIMARY KEY";
 	}
 
@@ -496,7 +525,7 @@ WHERE OBJECT_NAME(i.object_id) = " . q($table)
 			$column = idf_escape($field[0]);
 			$val = $field[1];
 			if (!$val) {
-				$alter["DROP"][] = " COLUMN $column";
+				$alter["DROP"][] = $field[0];
 			} else {
 				$val[1] = preg_replace("~( COLLATE )'(\\w+)'~", '\1\2', $val[1]);
 				$comments[$field[0]] = $val[5];
@@ -533,9 +562,69 @@ SQL);
 		if ($foreign) {
 			$alter[""] = $foreign;
 		}
+		$ns = $_GET["ns"] != "" ? $_GET["ns"] : 'dbo';
 		foreach ($alter as $key => $val) {
-			if (!queries("ALTER TABLE " . table($name) . " $key" . implode(",", $val))) {
-				return false;
+			// DROP COLUMN does not work by itself because of constraints and indexes. In particular,
+			// default values are saved as constraints in MS SQL and there is no way to see/remove them
+			// in Adminer, so we automate this process here. 
+			if ($key === 'DROP') {
+				foreach ($val as $column) {
+					$sql = <<<SQL
+
+BEGIN TRANSACTION;
+BEGIN TRY
+    -- Declare table, column, and schema names
+    DECLARE @schema NVARCHAR(256) = '{$ns}'; -- e.g., 'dbo'
+    DECLARE @table NVARCHAR(256) = '{$name}';
+    DECLARE @column NVARCHAR(256) = '{$column}';
+    DECLARE @sql NVARCHAR(MAX);
+    DECLARE @qualifiedTable NVARCHAR(MAX) = QUOTENAME(@schema) + '.' + QUOTENAME(@table);
+
+    -- Drop Default Constraints
+    SELECT @sql = STRING_AGG('ALTER TABLE ' + @qualifiedTable + ' DROP CONSTRAINT ' + QUOTENAME(name), '; ')
+    FROM sys.default_constraints
+    WHERE parent_object_id = OBJECT_ID(@schema + '.' + @table) 
+    	AND COL_NAME(parent_object_id, parent_column_id) = @column;
+
+    IF @sql IS NOT NULL EXEC sp_executesql @sql;
+
+    -- Drop Foreign Key Constraints
+    SELECT @sql = STRING_AGG('ALTER TABLE ' + @qualifiedTable + ' DROP CONSTRAINT ' + QUOTENAME(name), '; ')
+    FROM sys.foreign_keys
+    WHERE parent_object_id = OBJECT_ID(@schema + '.' + @table);
+
+    IF @sql IS NOT NULL EXEC sp_executesql @sql;
+
+    -- Drop Indexes
+    SELECT @sql = STRING_AGG('DROP INDEX ' + QUOTENAME(i.name) + ' ON ' + @qualifiedTable, '; ')
+    FROM sys.indexes i
+    	INNER JOIN sys.index_columns ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id
+    WHERE OBJECT_NAME(ic.object_id, DB_ID(@schema)) = @table
+    	AND COL_NAME(ic.object_id, ic.column_id) = @column;
+
+    IF @sql IS NOT NULL EXEC sp_executesql @sql;
+
+    -- Drop the Column
+    SET @sql = 'ALTER TABLE ' + @qualifiedTable + ' DROP COLUMN ' + QUOTENAME(@column);
+    EXEC sp_executesql @sql;
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    ROLLBACK TRANSACTION;
+	PRINT ERROR_MESSAGE();
+    THROW;
+END CATCH
+SQL;
+					if (!queries($sql)) {
+						return false;
+					}
+				}
+			} else {
+				// All other table modifications can be applied directly
+				if (!queries("ALTER TABLE " . table($name) . " $key" . implode(",", $val))) {
+					return false;
+				}
 			}
 		}
 		foreach ($comments as $key => $val) {
@@ -543,6 +632,7 @@ SQL);
 			queries("EXEC sp_dropextendedproperty @name = N'MS_Description', @level0type = N'Schema', @level0name = " . q(get_schema()) . ", @level1type = N'Table', @level1name = " . q($name) . ", @level2type = N'Column', @level2name = " . q($key));
 			queries("EXEC sp_addextendedproperty @name = N'MS_Description', @value = " . $comment . ", @level0type = N'Schema', @level0name = " . q(get_schema()) . ", @level1type = N'Table', @level1name = " . q($name) . ", @level2type = N'Column', @level2name = " . q($key));
 		}
+		cache()->clear();
 		return true;
 	}
 
@@ -563,6 +653,7 @@ SQL);
 				return false;
 			}
 		}
+		cache()->clear();
 		return (!$index || queries("DROP INDEX " . implode(", ", $index)))
 			&& (!$drop || queries("ALTER TABLE " . table($table) . " DROP " . implode(", ", $drop)))
 		;
@@ -608,14 +699,17 @@ SQL);
 	}
 
 	function drop_views($views) {
+		cache()->clear();
 		return queries("DROP VIEW " . implode(", ", array_map('table', $views)));
 	}
 
 	function drop_tables($tables) {
+		cache()->clear();
 		return queries("DROP TABLE " . implode(", ", array_map('table', $tables)));
 	}
 
 	function move_tables($tables, $views, $target) {
+		cache()->clear();
 		return apply_queries("ALTER SCHEMA " . idf_escape($target) . " TRANSFER", array_merge($tables, $views));
 	}
 	
@@ -659,6 +753,7 @@ EXEC('ALTER TABLE {$targetTableFull} ADD CONSTRAINT PK_{$targetTableName} PRIMAR
 	        $connection->error = 'Cannot copy views in Microsoft SQL';
 	        return false;
 	    }
+		cache()->clear();
 	    return true;
 	}
 
@@ -741,47 +836,60 @@ WHERE sys1.xtype = 'TR' AND sys2.name = " . q($table)
 	 */
 	function drop_table_sql($table, $if_not_exists = false, $drop_dependencies = false)
 	{
-	    $t = table($table);
-	    $sql = $if_not_exists ? "IF OBJECT_ID ({$t}, N'U') IS NOT NULL\n" : '';
+		$ns = get_schema();
+		if (! $ns) {
+			$ns = 'dbo';
+		} 
+	    $sql = $if_not_exists ? "IF OBJECT_ID ({$ns}.{$table}, N'U') IS NOT NULL\n" : '';
 	    if (! $drop_dependencies) {
-	       $sql .= "DROP TABLE $t";
+	       $sql .= "DROP TABLE [{$ns}].[{$table}]";
 	    } else {
-	       $sql .= "
-BEGIN
-    DECLARE @table NVARCHAR(max) = 'YourTableName';
-    DECLARE @schema NVARCHAR(max) = 'dbo';
-    DECLARE @stmt NVARCHAR(max);
-	-- STEP1: Remove foreign keys to this table
-	-- Cursor to generate ALTER TABLE DROP CONSTRAINT statements  
-	DECLARE cur CURSOR FOR
-		SELECT 'ALTER TABLE ' + OBJECT_SCHEMA_NAME(parent_object_id) + '.' + OBJECT_NAME(parent_object_id) + ' DROP CONSTRAINT ' + name
-		FROM sys.foreign_keys 
-		WHERE OBJECT_SCHEMA_NAME(referenced_object_id) = @schema 
-			AND OBJECT_NAME(referenced_object_id) = @table;
- 
-   OPEN cur;
-   FETCH cur INTO @stmt;
-	-- Drop each found foreign key constraint 
-	WHILE @@FETCH_STATUS = 0
-		BEGIN
-			EXEC (@stmt);
-			FETCH cur INTO @stmt;
-		END
-	CLOSE cur;
-	DEALLOCATE cur;
-	
-	-- STEP2: remove constraints inside this table
-	SELECT @stmt = '';
-	SELECT @stmt += N'
-ALTER TABLE ' + OBJECT_NAME(parent_object_id) + ' DROP CONSTRAINT ' + OBJECT_NAME(object_id) + ';' 
-	FROM SYS.OBJECTS
-	WHERE TYPE_DESC LIKE '%CONSTRAINT' AND OBJECT_NAME(parent_object_id) = @table AND SCHEMA_NAME(schema_id) = @schema;
-	EXEC(@stmt);
+	       $sql .= <<<SQL
+BEGIN TRANSACTION;
+BEGIN TRY
+    -- Define the schema and table name to be dropped
+    DECLARE @SchemaName NVARCHAR(MAX) = '{$ns}';
+    DECLARE @TableName NVARCHAR(MAX) = '{$table}';
+    DECLARE @FullTableName NVARCHAR(MAX) = QUOTENAME(@SchemaName) + '.' + QUOTENAME(@TableName);
 
-	-- FINALLY drop the table itself
-	DROP TABLE CONCAT(@schema, '.', @table);
-END
-";
+    -- Drop foreign key constraints
+    DECLARE @Sql NVARCHAR(MAX);
+    SELECT @Sql = STRING_AGG(CONCAT('ALTER TABLE ', QUOTENAME(OBJECT_SCHEMA_NAME(parent_object_id)), '.', QUOTENAME(OBJECT_NAME(parent_object_id)), 
+                                    ' DROP CONSTRAINT ', QUOTENAME(name), ';'), ' ')
+    FROM sys.foreign_keys
+    WHERE parent_object_id = OBJECT_ID(@FullTableName);
+
+    IF @Sql IS NOT NULL
+        EXEC sp_executesql @Sql;
+
+    -- Drop primary key constraints
+    SELECT @Sql = STRING_AGG(CONCAT('ALTER TABLE ', QUOTENAME(OBJECT_SCHEMA_NAME(parent_object_id)), '.', QUOTENAME(OBJECT_NAME(parent_object_id)), 
+                                    ' DROP CONSTRAINT ', QUOTENAME(name), ';'), ' ')
+    FROM sys.key_constraints
+    WHERE parent_object_id = OBJECT_ID(@FullTableName) AND type = 'PK';
+
+    IF @Sql IS NOT NULL
+        EXEC sp_executesql @Sql;
+
+    -- Drop indexes
+    SELECT @Sql = STRING_AGG(CONCAT('DROP INDEX ', QUOTENAME(name), ' ON ', QUOTENAME(OBJECT_SCHEMA_NAME(object_id)), '.', QUOTENAME(OBJECT_NAME(object_id)), ';'), ' ')
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID(@FullTableName) AND name IS NOT NULL AND type > 0;
+
+    IF @Sql IS NOT NULL
+        EXEC sp_executesql @Sql;
+
+    -- Finally, drop the table
+    SET @Sql = CONCAT('DROP TABLE ', @FullTableName, ';');
+    EXEC sp_executesql @Sql;
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    ROLLBACK TRANSACTION;
+    PRINT ERROR_MESSAGE();
+END CATCH
+SQL;
 	    }
 	    return $sql;
 	}

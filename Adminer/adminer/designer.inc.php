@@ -257,7 +257,7 @@ foreach ($schema as $table_name => $table) {
 /*
 
 
-POST example_database_connection?mssql=swusqllogbase&username=LOOP&db=ExampleDatabase&ns=dbo&create=Komponente
+POST <url_to_adminer>?mssql=<db>&username=<user>&db=<db>&ns=dbo&create=<table_name>
 
 name: Komponente
 fields[1][field]: Betreiber

@@ -42,6 +42,7 @@ class AdminerAutocomplete
 </style>
 <script<?php echo nonce();?> src="../externals/ace/ace.js"></script>
 <script<?php echo nonce();?> src="../externals/ace/ext-language_tools.js"></script>
+<script<?php echo nonce();?> src="../externals/ace/ext-searchbox.js"></script>
 <script<?php echo nonce();?>>
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -128,6 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		}],
 		// to make popup appear automatically, without explicit ctrl+space
 		enableLiveAutocompletion: true,
+		enableSnippets: true,
 	});
 
 	textarea.hidden = true;
