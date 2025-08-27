@@ -138,11 +138,7 @@ class AtheosAPI extends InclusionAPI
                 // $headers = array_merge($headersSent, $this->getHeadersCommon())
                 if (stripos($file, 'controller') !== false && (mb_substr($output, 0, 1) === '[' || mb_substr($output, 0, 1) === '{')) {
                     $headers['Content-Type'] = 'application/json';
-                    // There are cases, when Atheos prints multiple JSON objects - see MOD in `Atheos/traits/reply.php`
-                    // Need to check if this is the case and just leave the first one.
-                    if (false !== ($pos = strpos($output, '}{')) && json_decode($output) === null) {
-                        $output = mb_substr($output, 0, $pos+1);
-                    }
+                    $output = $this->sanitizeAtheosOutput($output);
                 }
                 
                 break;
@@ -164,6 +160,16 @@ class AtheosAPI extends InclusionAPI
                 $headers['Content-Type'] = $contentType;
         }
         return new Response(200, $headers, $output);
+    }
+    
+    protected function sanitizeAtheosOutput($output) : string
+    {
+        // There are cases, when Atheos prints multiple JSON objects - see MOD in `Atheos/traits/reply.php`
+        // Need to check if this is the case and just leave the first one.
+        if (false !== ($pos = mb_strpos($output, '}{')) && json_decode($output) === null) {
+            $output = mb_substr($output, 0, $pos+1);
+        }
+        return $output;
     }
 
     protected function getHeadersSent() : array
@@ -267,10 +273,11 @@ class AtheosAPI extends InclusionAPI
         
         $output = $this->includeFile('controller.php');
         if ($output) {
+            $output = $this->sanitizeAtheosOutput($output);
             try {
                 $result = JsonDataType::decodeJson($output);
             } catch (\Throwable $e) {
-                throw new RuntimeException('Error in Atheos IDE: ' . $e->getMessage(), null, $e);
+                throw new RuntimeException('Cannot parse response from Atheos IDE: ' . $e->getMessage() . '. Received: ' . StringDataType::truncate($output, 10), null, $e);
             }
             if ($result['status'] === 'error') {
                 throw new RuntimeException('Error in Atheos IDE: ' . $result['text'] . '. Response: ' . JsonDataType::encodeJson($result));
