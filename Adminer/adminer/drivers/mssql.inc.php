@@ -699,7 +699,7 @@ SQL;
             }
             $prettyRows[] = $prettyRow;
         }
-        return new fakeResult($prettyRows);
+        return new FakeResult($prettyRows);
 	}
 
 	function found_rows($table_status, $where) {
@@ -1215,20 +1215,26 @@ SQL;
 	}
 }
 
-class fakeResult
+class FakeResult
 {
     private $rows = [];
     private $fileds = [];
+    
     function __construct(array $rows) {
         $firstRow = reset($rows);
         $this->rows = $rows;
         $this->fields = array_keys($firstRow);
     }
-    function fetch_row()
+    
+    function fetch_assoc()
     {
         $current = current($this->rows);
         next($this->rows);
         return $current;
+    }
+    function fetch_row()
+    {
+        return array_values($this->fetch_assoc());
     }
     
     function fetch_field()
