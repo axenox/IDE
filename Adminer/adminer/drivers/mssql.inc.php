@@ -666,9 +666,40 @@ SQL;
 
 	function explain($connection, $query) {
 		$connection->query("SET SHOWPLAN_ALL ON");
-		$return = $connection->query($query);
+		$result = $connection->query($query);
 		$connection->query("SET SHOWPLAN_ALL OFF"); // connection is used also for indexes
-		return $return;
+        
+        $prettyRows = [];
+        $i = 0;
+        $overallCost = null;
+        while ($row = $result->fetch_assoc()) {
+            $i++;
+            if ($i === 1) {
+                $overallCost = $row['TotalSubtreeCost'] ?? 1;
+            }
+            $prettyRow = [
+                //'Cost' => round(($row['TotalSubtreeCost'] ?? 0), 2),
+                'Cost[%]' => round($row['TotalSubtreeCost'] / $overallCost * 100, 0),
+                'Rows' => intval($row['EstimateRows'])
+            ];
+            foreach ($row as $col => $val) {
+                switch (true) {
+                    case $col === 'StmtId':
+                    case $col === 'NodeId':
+                    case $col === 'Parent':
+                        continue 2;
+                    case is_float($val):
+                        $val = round($val, 2);
+                        break;
+                }
+                $prettyRow[$col] = $val;
+            }
+            if ($i === 1) {
+                $prettyRow['StmtText'] = "Whole statement";
+            }
+            $prettyRows[] = $prettyRow;
+        }
+        return new FakeResult($prettyRows);
 	}
 
 	function found_rows($table_status, $where) {
@@ -1182,4 +1213,38 @@ SQL;
 			),
 		);
 	}
+}
+
+class FakeResult
+{
+    private $rows = [];
+    private $fileds = [];
+    
+    function __construct(array $rows) {
+        $firstRow = reset($rows);
+        $this->rows = $rows;
+        $this->fields = array_keys($firstRow);
+    }
+    
+    function fetch_assoc()
+    {
+        $current = current($this->rows);
+        next($this->rows);
+        return $current;
+    }
+    function fetch_row()
+    {
+        return array_values($this->fetch_assoc());
+    }
+    
+    function fetch_field()
+    {
+        $col = current($this->fields);
+        $field = new stdClass();
+        $field->name = $col;
+        $field->orgname = $col;
+        $field->type = 0;
+        next($this->fields);
+        return $field;
+    }
 }
