@@ -1,3 +1,15 @@
+/* MOD BEGIN max-height for SELECT results + sticky headings */
+.scrollable {
+    max-height: 80vh;
+    overflow: auto;
+    position: relative;
+}
+.scrollable > table > thead {
+    position: sticky;
+    top: 0;
+}
+/* MOD END */
+
 #filter-field {width: 100%}
 #dbs > select[name=db] {display: none;}
 #dbs > span:first-of-type {display:none;}
@@ -138,7 +150,7 @@ tbody tr:hover th {
 }
 
 table:not(.checkable) th {
-	min-width: 120px;
+	min-width: 60px;
 }
 
 thead td,
