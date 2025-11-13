@@ -42,6 +42,7 @@ class AdminerAPI extends InclusionAPI
             // MySQL, MariaDB
             case stripos($connectorClass, 'mariadb') !== false:
             case stripos($connectorClass, 'mysql') !== false:
+            case stripos($connectorClass, 'postgresql') !== false:
                 $password = $connectionConfig['password'];
                 if ($password === '' || $password === null) {
                     $password = AdminerAPI::NO_PASSWROD;
@@ -102,10 +103,10 @@ class AdminerAPI extends InclusionAPI
         $adminerDrivers = [
             'mysql' => 'server',
             'sqlite' => 'sqlite', // what is the difference to sqlite2???
-            'pgsql' => 'pgsql',
-            'oracle' => 'oracle',
+            'postgresql' => 'pgsql',
+            'oraclesql' => 'oracle',
             'mssql' => 'mssql',
-            'mongo' => 'mongo',
+            'mongodb' => 'mongo',
             'elastic' => 'elastic'
         ];
         
