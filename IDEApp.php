@@ -1,6 +1,7 @@
 <?php
 namespace axenox\IDE;
 
+use axenox\GenAI\Common\AiAgentInstaller;
 use exface\Core\Interfaces\InstallerInterface;
 use exface\Core\CommonLogic\Model\App;
 use exface\Core\Facades\AbstractHttpFacade\HttpFacadeInstaller;
@@ -25,6 +26,10 @@ class IDEApp extends App
         $facadeInstaller = new HttpFacadeInstaller($this->getSelector());
         $facadeInstaller->setFacade(FacadeFactory::createFromString(IDEFacade::class, $this->getWorkbench()));
         $container->addInstaller($facadeInstaller);
+
+        // Built-in AI agents
+        $aiInstaller = new AiAgentInstaller($this->getSelector());
+        $container->addInstaller($aiInstaller);
         
         return $container;
     }

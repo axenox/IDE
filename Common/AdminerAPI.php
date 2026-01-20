@@ -8,6 +8,7 @@ use exface\Core\DataTypes\JsonDataType;
 use exface\Core\DataTypes\StringDataType;
 use exface\Core\Exceptions\UnexpectedValueException;
 use exface\Core\Factories\DataSheetFactory;
+use exface\Core\Interfaces\DataSources\SqlDataConnectorInterface;
 use GuzzleHttp\Psr7\Response;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -270,5 +271,34 @@ class AdminerAPI extends InclusionAPI
         ob_end_clean();
         chdir($cwd);
         return $output;
+    }
+    
+    public function exportTableDDL(SqlDataConnectorInterface $connection, string $tableName, ?string $schema = null, ?string $style = 'DROP+CREATE') : string
+    {
+        global $adminer;
+        $facadePath = $this->getApiUrlPath($connection, null, $schema);
+        $this->runAdminer($facadePath);
+        $dump = create_sql($tableName, true, $style);
+        return $dump;
+    }
+    
+    protected function getApiUrlPath(SqlDataConnectorInterface $connection, ?string $function = null, ?string $schema = null) : string
+    {
+        // adminer/suedlink_tpcde_db_azure_dev?mssql=kmtssqlsrvdev.database.windows.net&username=kmtsadmin&db=SuedLinkKmtsDev&ns=dbo&dump=
+        $adminerAuth = $this->getAdminerAuth($connection->exportUxonObject()->toArray(), get_class($connection));
+        $url = '/adminer/' . $connection->getAliasWithNamespace();
+        $_GET[$adminerAuth['driver']] = $adminerAuth['server'];
+        $_GET['username'] = $adminerAuth['username'];
+        $_GET['db'] = $adminerAuth['db'];
+        $_GET['ns'] = $schema ?? '';
+        if ($function !== null) {
+            $_GET[$function] = '';
+        }
+        return $url;
+    }
+    
+    private function getApiToken() : string
+    {
+        return $_SESSION['token'];
     }
 }

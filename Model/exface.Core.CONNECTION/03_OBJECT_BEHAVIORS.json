@@ -110,6 +110,40 @@
             "DESCRIPTION": "",
             "DISABLED_FLAG": 0,
             "PRIORITY": null
+        },
+        {
+            "_EXPORT_SUMMARY": "SQL assistant in SQL admin",
+            "CREATED_ON": "2024-12-13 22:09:40",
+            "MODIFIED_ON": "2026-01-20 19:38:00",
+            "CREATED_BY_USER": "0x31000000000000000000000000000000",
+            "MODIFIED_BY_USER": "0x31000000000000000000000000000000",
+            "UID": "0x11ef9ac692a5712e9ac6025041000001",
+            "BEHAVIOR": "exface/core/Behaviors/WidgetModifyingBehavior.php",
+            "CONFIG_UXON": {
+                "only_for_actions": [
+                    "axenox.IDE.ConnectionSqlAdmin"
+                ],
+                "add_sidebar": {
+                    "object_alias": "exface.Core.CONNECTION",
+                    "width": "342px",
+                    "caption": "AI SQL assistant",
+                    "collapsed": false,
+                    "widgets": [
+                        {
+                            "widget_type": "axenox.GenAI.AIChat",
+                            "agent_alias": "axenox.IDE.sql_admin_assistant",
+                            "attribute_alias": "UID",
+                            "intro_message": "Ask me to write SQL statements or analyse pasted SQL. I know the DB schema, but cannot execute SQL myself."
+                        }
+                    ]
+                }
+            },
+            "OBJECT": "0x33380000000000000000000000000000",
+            "APP": "0x11ed96509743e0c29650025041000001",
+            "NAME": "SQL assistant in SQL admin",
+            "DESCRIPTION": "",
+            "DISABLED_FLAG": 0,
+            "PRIORITY": null
         }
     ],
     "totals_rows": [],
