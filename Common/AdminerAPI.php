@@ -272,13 +272,29 @@ class AdminerAPI extends InclusionAPI
         chdir($cwd);
         return $output;
     }
-    
-    public function exportTableDDL(SqlDataConnectorInterface $connection, string $tableName, ?string $schema = null, ?string $style = 'DROP+CREATE') : string
+
+    /**
+     * Returns the DDL (CREATE script) for a given table or view
+     * 
+     * Returns a comment with an error if the table or view was not found
+     * 
+     * @param SqlDataConnectorInterface $connection
+     * @param string $tableOrViewName
+     * @param string|null $schema
+     * @param string|null $style - e.g. `DROP+CREATE` or `CREATE`
+     * @return string
+     */
+    public function exportDDL(SqlDataConnectorInterface $connection, string $tableOrViewName, ?string $schema = null, ?string $style = 'CREATE') : string
     {
         global $adminer;
         $facadePath = $this->getApiUrlPath($connection, null, $schema);
+        // TODO only run adminer if it was not run yet during the current HTTP request.
         $this->runAdminer($facadePath);
-        $dump = create_sql($tableName, true, $style);
+        // TODO if it is a view and not a table, dump the CREATE-UPDATE VIEW script here instead
+        $dump = create_sql($tableOrViewName, false, $style);
+        if (empty($dump)) {
+            $dump = '-- ERROR: table "' . $tableOrViewName . '" not found in schema/tablespace "' . $schema . '"';
+        }
         return $dump;
     }
     
@@ -296,7 +312,16 @@ class AdminerAPI extends InclusionAPI
         }
         return $url;
     }
-    
+
+    /**
+     * Returns the Adminer CSRF token stored in the session
+     * 
+     * Adminer uses CSRF tokens for every request. It seems, though, they are not required to call adminer functions
+     * without processing an entire request. Should the CSRF token be required in future, you can find its logic in
+     * `functions.inc.php` in `get_token()` and `verify_token()`.
+     * 
+     * @return string
+     */
     private function getApiToken() : string
     {
         return $_SESSION['token'];
