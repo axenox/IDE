@@ -47,7 +47,7 @@ class GetSqlTableDdlTool extends AbstractAiTool
     {
         $ideFacade = FacadeFactory::createFromString(IDEFacade::class, $this->getWorkbench());
         $adminerAPI = new AdminerAPI($this->getWorkbench(), $ideFacade->getUrlRouteDefault() . '/', 'adminer/', 'index.php', []);
-        return $adminerAPI->exportTableDDL($this->connection, $tableName, $schema);
+        return $adminerAPI->exportDDL($this->connection, $tableName, $schema);
     }
 
     /**
