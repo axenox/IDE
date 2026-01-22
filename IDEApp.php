@@ -1,7 +1,6 @@
 <?php
 namespace axenox\IDE;
 
-use axenox\GenAI\Common\AiAgentInstaller;
 use exface\Core\Interfaces\InstallerInterface;
 use exface\Core\CommonLogic\Model\App;
 use exface\Core\Facades\AbstractHttpFacade\HttpFacadeInstaller;
@@ -28,8 +27,10 @@ class IDEApp extends App
         $container->addInstaller($facadeInstaller);
 
         // Built-in AI agents
-        $aiInstaller = new AiAgentInstaller($this->getSelector());
-        $container->addInstaller($aiInstaller);
+        if (class_exists('\\axenox\\GenAI\\Common\\AiAgentInstaller')) {
+            $aiInstaller = new \axenox\GenAI\Common\AiAgentInstaller($this->getSelector());
+            $container->addInstaller($aiInstaller);
+        }
         
         return $container;
     }
