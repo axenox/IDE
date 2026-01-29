@@ -290,12 +290,28 @@ class AdminerAPI extends InclusionAPI
         $facadePath = $this->getApiUrlPath($connection, null, $schema);
         // TODO only run adminer if it was not run yet during the current HTTP request.
         $this->runAdminer($facadePath);
-        // TODO if it is a view and not a table, dump the CREATE-UPDATE VIEW script here instead
-        $dump = create_sql($tableOrViewName, false, $style);
-        if (empty($dump)) {
-            $dump = '-- ERROR: table "' . $tableOrViewName . '" not found in schema/tablespace "' . $schema . '"';
+
+        $tableStatus = table_status($tableOrViewName);
+        if (is_view($tableStatus)) {
+            $viewStatus = view($tableStatus);
+            $dump = "CREATE VIEW $tableOrViewName AS \n" . $viewStatus["select"];
+        } else {
+            $dump = create_sql($tableOrViewName, false, $style);
+            if (empty($dump)) {
+                $dump = '-- ERROR: table "' . $tableOrViewName . '" not found in schema/tablespace "' . $schema . '"';
+            }
         }
         return $dump;
+    }
+    
+    public function runSql(string $sql) : array
+    {
+        // TODO only allow SELECT queries - no DELETE, DROP, UPDATE, etc.
+        global $adminer;
+        global $connection;
+        $connection->multi_query($sql);
+        $result = $connection->store_result();
+        // TODO transform result to array
     }
     
     protected function getApiUrlPath(SqlDataConnectorInterface $connection, ?string $function = null, ?string $schema = null) : string
