@@ -38,9 +38,9 @@ class GetSqlTableDdlTool extends AbstractAiTool
      */
     public function invoke(array $arguments): string
     {
-        list($tableName) = $arguments;
+        list($tableName, $schema) = $arguments;
         
-        return $this->getDDL($tableName);
+        return $this->getDDL($tableName, $schema);
     }
     
     protected function getDDL(string $tableName, ?string $schema = null): string
