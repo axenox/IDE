@@ -318,6 +318,9 @@ class AdminerAPI extends InclusionAPI
     {
         // adminer/example_database_connection?mssql=kmtssqlsrvdev.database.windows.net&username=kmtsadmin&db=ExampleDatabase&ns=dbo&dump=
         $adminerAuth = $this->getAdminerAuth($connection->exportUxonObject()->toArray(), get_class($connection));
+        if (! $this->isAuthenticated($adminerAuth)) {
+            // $this->authenticate($adminerAuth);
+        }
         $url = '/adminer/' . $connection->getAliasWithNamespace();
         $_GET[$adminerAuth['driver']] = $adminerAuth['server'];
         $_GET['username'] = $adminerAuth['username'];
@@ -327,6 +330,36 @@ class AdminerAPI extends InclusionAPI
             $_GET[$function] = '';
         }
         return $url;
+    }
+    
+    protected function isAuthenticated(array $adminerAuth) : bool
+    {
+        $server = ($_SESSION['db'] ?? [])['server'];
+        if ($server === null) {
+            return false;
+        }
+        $users = $server[$adminerAuth['server']];
+        if (! is_array($users)) {
+            return false;
+        }
+        if (! isset($users[$adminerAuth['username']])) {
+            return false;
+        }
+        return true;
+    }
+    
+    protected function authenticate(array $adminerAuth)
+    {
+        $getVars = $_GET;
+        $postVars = $_POST;
+        $_GET = [];
+        $_POST['auth'] = $adminerAuth;
+        
+        $this->launchAdminer();
+        
+        $_GET = $getVars;
+        $_POST = $postVars;
+        
     }
 
     /**
