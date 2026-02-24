@@ -48,8 +48,14 @@ class Filemanager {
 	// Delete (Deletes a file or directory (+contents))
 	//////////////////////////////////////////////////////////////////////////80
 	public function delete($path) {
-		if (!file_exists($path)) {
-			Common::send("error", "Invalid path.");
+        // FIXME add a proper fix for renaming/deleting files with umlauts and other unicode chars, that result
+        // from poorly named uploads. Probably need to change path::cleanPath() to support more characters
+        if (! file_exists($path)) {
+            if (null !== $requestPath = $this->getPathWithUnicode()) {
+                $path = $requestPath;
+            } else {
+                Common::send("error", "Invalid path.");
+            }
 		}
 
 		if (is_dir($path)) {
@@ -344,6 +350,13 @@ class Filemanager {
 	// Rename
 	//////////////////////////////////////////////////////////////////////////80
 	public function rename($path, $name) {
+        // FIXME add a proper fix for renaming/deleting files with umlauts and other unicode chars, that result
+        // from poorly named uploads. Probably need to change path::cleanPath() to support more characters
+        if (! file_exists($path)) {
+            if (null !== $pathFromRequest = $this->getPathWithUnicode()) {
+                $path = $pathFromRequest;
+            }
+        }
 		$parent = dirname($path);
 
 		$newPath = $parent . "/" . $name;
@@ -418,4 +431,19 @@ class Filemanager {
 		}
 
 	}
+    
+    protected function getPathWithUnicode() : ?string {
+        $pathRaw = POST("path");
+        $parent = dirname($pathRaw);
+        $filename = basename($pathRaw);
+        // Make sure, the folder path is leagal. This will actually remove all unicode characters from the
+        // folder path, so there will still be issues with unicode, but the folder can then be removed or
+        // renamed manually.
+        $parent = Common::getWorkspacePath($parent);
+        $path = $parent . "/" . $filename;
+        if (! file_exists($path)) {
+            return null;
+        }
+        return $path;
+    }
 }

@@ -25,7 +25,25 @@ class IDEApp extends App
         $facadeInstaller = new HttpFacadeInstaller($this->getSelector());
         $facadeInstaller->setFacade(FacadeFactory::createFromString(IDEFacade::class, $this->getWorkbench()));
         $container->addInstaller($facadeInstaller);
+
+        // Built-in AI agents
+        if (class_exists('\\axenox\\GenAI\\Common\\AiAgentInstaller')) {
+            $aiInstaller = new \axenox\GenAI\Common\AiAgentInstaller($this->getSelector());
+            $container->addInstaller($aiInstaller);
+        }
         
         return $container;
+    }
+
+    /**
+     *
+     * {@inheritDoc}
+     * @see \exface\Core\CommonLogic\Model\App::getUid()
+     */
+    public function getUid() : ?string
+    {
+        // Hardcode the UID of the core app, because some installers might attempt to use it
+        // before the model is fully functional on first time installing.
+        return '0x11ed96509743e0c29650025041000001';
     }
 }

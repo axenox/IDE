@@ -1,10 +1,10 @@
 {
-    "object_alias": "exface.Core.APP",
+    "object_alias": "axenox.GenAI.AI_AGENT",
     "columns": [
         {
             "name": "_EXPORT_SUMMARY",
             "hidden": true,
-            "attribute_alias": "LABEL"
+            "attribute_alias": "NAME"
         },
         {
             "name": "CREATED_ON",
@@ -27,41 +27,46 @@
             "attribute_alias": "UID"
         },
         {
-            "name": "DEFAULT_LANGUAGE_CODE",
-            "attribute_alias": "DEFAULT_LANGUAGE_CODE"
+            "name": "NAME",
+            "attribute_alias": "NAME"
+        },
+        {
+            "name": "DESCRIPTION",
+            "attribute_alias": "DESCRIPTION"
         },
         {
             "name": "ALIAS",
             "attribute_alias": "ALIAS"
         },
         {
-            "name": "NAME",
-            "attribute_alias": "NAME"
+            "name": "APP",
+            "attribute_alias": "APP"
         }
     ],
     "rows": [
         {
-            "_EXPORT_SUMMARY": "axenox IDE [axenox.IDE]",
-            "CREATED_ON": "2023-01-14 12:28:37",
-            "MODIFIED_ON": "2023-01-14 12:28:37",
+            "_EXPORT_SUMMARY": "SQL admin assistant",
+            "CREATED_ON": "2024-09-17 13:29:49",
+            "MODIFIED_ON": "2026-01-20 19:43:02",
             "CREATED_BY_USER": "0x31000000000000000000000000000000",
             "MODIFIED_BY_USER": "0x31000000000000000000000000000000",
-            "UID": "0x11ed96509743e0c29650025041000001",
-            "DEFAULT_LANGUAGE_CODE": "en",
-            "ALIAS": "axenox.IDE",
-            "NAME": "axenox IDE"
+            "UID": "0x11ef997726a6346a9977025041000001",
+            "NAME": "SQL admin assistant",
+            "DESCRIPTION": "Helps writing SQL statements in the built-in SQL admin",
+            "ALIAS": "sql_admin_assistant",
+            "APP": "0x11ed96509743e0c29650025041000001"
         }
     ],
     "totals_rows": [],
     "filters": {
         "operator": "AND",
-        "base_object_alias": "exface.Core.APP",
+        "base_object_alias": "axenox.GenAI.AI_AGENT",
         "conditions": [
             {
-                "expression": "UID",
+                "expression": "APP",
                 "comparator": "=",
                 "value": "0x11ed96509743e0c29650025041000001",
-                "object_alias": "exface.Core.APP"
+                "object_alias": "axenox.GenAI.AI_AGENT"
             }
         ]
     },
