@@ -40,7 +40,7 @@ switch ($action) {
 			<p>
 				<?php echo i18n("duplicate_name"); ?>
 			</p>
-			<input type="text" name="clone" autofocus="autofocus" autocomplete="off" value="<?php echo($name); ?>">
+			<input type="text" name="clone" autofocus="autofocus" autocomplete="off" value="<?php echo($name); ?>" pattern="[A-Za-z0-9 \-\._]+" title="Letters, Numbers, Dashes, Underscores, Spaces or Periods Only">
 			<button class="btn-left"><?php echo i18n("duplicate"); ?></button>
 			<button class="btn-right" onclick="atheos.modal.unload(); return false;"><?php echo i18n("cancel"); ?></button>
 		</form>
