@@ -1,22 +1,28 @@
 {
-	"name" : "axenox/ide",
-	"require" : {
-		"exface/core" : "^1.0"
-	},
-	"autoload" : {
-		"psr-4" : {
-			"\\axenox\\IDE\\" : ""
-		},
-		"exclude-from-classmap" : [
-			"/Config/",
-			"/Translations/",
-			"/Model/"
-		]
-	},
-	"extra" : {
-		"app" : {
-			"app_uid" : "0x11ed96509743e0c29650025041000001",
-			"app_alias" : "axenox.IDE"
-		}
-	}
+    "name": "axenox/ide",
+    "require": {
+        "exface/core": "^1.0",
+        "npm-asset/svg-pan-zoom": "^3"
+    },
+    "support": {
+        "source": "https://github.com/axenox/ide",
+        "docs": "https://github.com/axenox/ide/blob/1.x-dev/Docs",
+        "issues": "https://github.com/axenox/ide/issues"
+    },
+    "autoload": {
+        "psr-4": {
+            "\\axenox\\IDE\\": ""
+        },
+        "exclude-from-classmap": [
+            "/Config/",
+            "/Translations/",
+            "/Model/"
+        ]
+    },
+    "extra": {
+        "app": {
+            "app_uid": "0x11ed96509743e0c29650025041000001",
+            "app_alias": "axenox.IDE"
+        }
+    }
 }

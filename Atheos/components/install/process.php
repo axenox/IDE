@@ -13,7 +13,7 @@
 //////////////////////////////////////////////////////////////////////////////80
 // Paths
 //////////////////////////////////////////////////////////////////////////////80
-require_once("../../common.php");
+require_once(__DIR__ . "/../../common.php");
 $rel = str_replace("/components/install/process.php", "", $_SERVER['REQUEST_URI']);
 $config = BASE_PATH . "/config.php";
 

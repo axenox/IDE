@@ -9,6 +9,7 @@ if ($_POST && !$error && !$_POST["add"] && !$_POST["change"] && !$_POST["change-
 	
 	if (!$_POST["drop"]) {
 		$row["source"] = array_filter($row["source"], 'strlen');
+		$row["source_table"] = $TABLE;
 		ksort($row["source"]); // enforce input order
 		$target = array();
 		foreach ($row["source"] as $key => $val) {

@@ -800,7 +800,16 @@ class Adminer {
 			set_utf8mb4($create);
 			if ($style && $create) {
 				if ($style == "DROP+CREATE" || $is_view == 1) {
-					echo "DROP " . ($is_view == 2 ? "VIEW" : "TABLE") . " IF EXISTS " . table($table) . ";\n";
+				    switch (true) {
+				        case $is_view === 0 && function_exists('drop_table_sql'):
+				            echo drop_table_sql($table, true) . ";\n";
+				            break;
+				        case $is_view >= 1 && function_exists('drop_view_sql'):
+				            echo drop_view_sql($table, true) . ";\n";
+				            break;
+				        default:
+                            echo "DROP " . ($is_view == 2 ? "VIEW" : "TABLE") . " IF EXISTS " . table($table) . ";\n";
+				    }
 				}
 				if ($is_view == 1) {
 					$create = remove_definer($create);
@@ -922,6 +931,7 @@ class Adminer {
 		echo '<p class="links">' . ($_GET["ns"] == "" && support("database") ? '<a href="' . h(ME) . 'database=">' . lang('Alter database') . "</a>\n" : "");
 		echo (support("scheme") ? "<a href='" . h(ME) . "scheme='>" . ($_GET["ns"] != "" ? lang('Alter schema') : lang('Create schema')) . "</a>\n" : "");
 		echo ($_GET["ns"] !== "" ? '<a href="' . h(ME) . 'schema=">' . lang('Database schema') . "</a>\n" : "");
+		echo ($_GET["ns"] !== "" ? '<a href="' . h(ME) . 'erdiagram=">' . lang('ER diagram') . "</a>\n" : "");
 		echo (support("privileges") ? "<a href='" . h(ME) . "privileges='>" . lang('Privileges') . "</a>\n" : "");
 		echo ($_GET["ns"] !== "" ? '<a href="' . h(ME) . 'designer=">' . lang('Designer') . "</a>\n" : "");
 		echo ($_GET["ns"] !== "" ? '<a href="' . h(ME) . 'viewer=">' . lang('Viewer') . "</a>\n" : "");

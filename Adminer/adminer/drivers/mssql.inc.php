@@ -1,4 +1,6 @@
 <?php
+
+use Psr\SimpleCache\CacheInterface;
 /**
 * @author Jakub Cernohuby
 * @author Vladimir Stastka
@@ -387,7 +389,22 @@ if (isset($_GET["mssql"])) {
 		return true;
 	}
 
+	function cache_get_table_key(string $table, string $schema = null): string 
+	{
+		return 'table--' . ($schema ? $schema : get_schema()) . '.' . $table;
+	}
+
+	function cache() : CacheInterface
+	{
+		global $workbench;
+		return $workbench->getCache()->getPool('adminer');
+	}
 	function fields($table) {
+		$ns = get_schema() != "" ? get_schema() : 'dbo';
+		$cacheKey = cache_get_table_key($table, $ns);
+		if (cache()->has($cacheKey)) {
+			cache()->get($cacheKey);
+		}
 		$comments = get_key_vals("SELECT objname, cast(value as varchar(max)) FROM fn_listextendedproperty('MS_DESCRIPTION', 'schema', " . q(get_schema()) . ", 'table', " . q($table) . ", 'column', NULL)");
 		$return = array();
 		foreach (get_rows("SELECT c.max_length, c.precision, c.scale, c.name, c.is_nullable, c.is_identity, c.collation_name, t.name type, CAST(d.definition as text) [default]
@@ -395,7 +412,7 @@ FROM sys.all_columns c
 JOIN sys.all_objects o ON c.object_id = o.object_id
 JOIN sys.types t ON c.user_type_id = t.user_type_id
 LEFT JOIN sys.default_constraints d ON c.default_object_id = d.parent_column_id
-WHERE o.schema_id = SCHEMA_ID(" . q(get_schema()) . ") AND o.type IN ('S', 'U', 'V') AND o.name = " . q($table)
+WHERE o.schema_id = SCHEMA_ID(" . q($ns) . ") AND o.type IN ('S', 'U', 'V') AND o.name = " . q($table)
 		) as $row) {
 			$type = $row["type"];
 			$length = (preg_match("~char|binary~", $type) ? $row["max_length"] : ($type == "decimal" ? "$row[precision],$row[scale]" : ""));
@@ -421,6 +438,7 @@ WHERE o.schema_id = SCHEMA_ID(" . q(get_schema()) . ") AND o.type IN ('S', 'U', 
 				"comment" => $comments[$row["name"]],
 			);
 		}
+		cache()->set($cacheKey, $return);
 		return $return;
 	}
 
@@ -482,10 +500,21 @@ WHERE OBJECT_NAME(i.object_id) = " . q($table)
 			queries("ALTER DATABASE " . idf_escape(DB) . " COLLATE $collation");
 		}
 		queries("ALTER DATABASE " . idf_escape(DB) . " MODIFY NAME = " . idf_escape($name));
+		cache()->clear();
 		return true; //! false negative "The database name 'test2' has been set."
 	}
 
 	function auto_increment() {
+		$incCol = $_POST['auto_increment_col'];
+		// If the auto-increment is used AND the column has a default, use that as the start value of the
+		// auto-increment
+		if ($incCol && $incFields = $_POST['fields'][$incCol] ?? null) {
+			if (($incStart = $incFields['default']) && is_numeric($incStart)) {
+				$_POST["Auto_increment"] = intval($incStart);
+				unset($_POST['fields'][$incCol]['has_default']);
+				$_POST['fields'][$incCol]['default'] = '';
+			}
+		}
 		return " IDENTITY" . ($_POST["Auto_increment"] != "" ? "(" . number($_POST["Auto_increment"]) . ",1)" : "") . " PRIMARY KEY";
 	}
 
@@ -496,7 +525,7 @@ WHERE OBJECT_NAME(i.object_id) = " . q($table)
 			$column = idf_escape($field[0]);
 			$val = $field[1];
 			if (!$val) {
-				$alter["DROP"][] = " COLUMN $column";
+				$alter["DROP"][] = $field[0];
 			} else {
 				$val[1] = preg_replace("~( COLLATE )'(\\w+)'~", '\1\2', $val[1]);
 				$comments[$field[0]] = $val[5];
@@ -533,9 +562,69 @@ SQL);
 		if ($foreign) {
 			$alter[""] = $foreign;
 		}
+		$ns = $_GET["ns"] != "" ? $_GET["ns"] : 'dbo';
 		foreach ($alter as $key => $val) {
-			if (!queries("ALTER TABLE " . table($name) . " $key" . implode(",", $val))) {
-				return false;
+			// DROP COLUMN does not work by itself because of constraints and indexes. In particular,
+			// default values are saved as constraints in MS SQL and there is no way to see/remove them
+			// in Adminer, so we automate this process here. 
+			if ($key === 'DROP') {
+				foreach ($val as $column) {
+					$sql = <<<SQL
+
+BEGIN TRANSACTION;
+BEGIN TRY
+    -- Declare table, column, and schema names
+    DECLARE @schema NVARCHAR(256) = '{$ns}'; -- e.g., 'dbo'
+    DECLARE @table NVARCHAR(256) = '{$name}';
+    DECLARE @column NVARCHAR(256) = '{$column}';
+    DECLARE @sql NVARCHAR(MAX);
+    DECLARE @qualifiedTable NVARCHAR(MAX) = QUOTENAME(@schema) + '.' + QUOTENAME(@table);
+
+    -- Drop Default Constraints
+    SELECT @sql = STRING_AGG('ALTER TABLE ' + @qualifiedTable + ' DROP CONSTRAINT ' + QUOTENAME(name), '; ')
+    FROM sys.default_constraints
+    WHERE parent_object_id = OBJECT_ID(@schema + '.' + @table) 
+    	AND COL_NAME(parent_object_id, parent_column_id) = @column;
+
+    IF @sql IS NOT NULL EXEC sp_executesql @sql;
+
+    -- Drop Foreign Key Constraints
+    SELECT @sql = STRING_AGG('ALTER TABLE ' + @qualifiedTable + ' DROP CONSTRAINT ' + QUOTENAME(name), '; ')
+    FROM sys.foreign_keys
+    WHERE parent_object_id = OBJECT_ID(@schema + '.' + @table);
+
+    IF @sql IS NOT NULL EXEC sp_executesql @sql;
+
+    -- Drop Indexes
+    SELECT @sql = STRING_AGG('DROP INDEX ' + QUOTENAME(i.name) + ' ON ' + @qualifiedTable, '; ')
+    FROM sys.indexes i
+    	INNER JOIN sys.index_columns ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id
+    WHERE OBJECT_NAME(ic.object_id, DB_ID(@schema)) = @table
+    	AND COL_NAME(ic.object_id, ic.column_id) = @column;
+
+    IF @sql IS NOT NULL EXEC sp_executesql @sql;
+
+    -- Drop the Column
+    SET @sql = 'ALTER TABLE ' + @qualifiedTable + ' DROP COLUMN ' + QUOTENAME(@column);
+    EXEC sp_executesql @sql;
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    ROLLBACK TRANSACTION;
+	PRINT ERROR_MESSAGE();
+    THROW;
+END CATCH
+SQL;
+					if (!queries($sql)) {
+						return false;
+					}
+				}
+			} else {
+				// All other table modifications can be applied directly
+				if (!queries("ALTER TABLE " . table($name) . " $key" . implode(",", $val))) {
+					return false;
+				}
 			}
 		}
 		foreach ($comments as $key => $val) {
@@ -543,6 +632,7 @@ SQL);
 			queries("EXEC sp_dropextendedproperty @name = N'MS_Description', @level0type = N'Schema', @level0name = " . q(get_schema()) . ", @level1type = N'Table', @level1name = " . q($name) . ", @level2type = N'Column', @level2name = " . q($key));
 			queries("EXEC sp_addextendedproperty @name = N'MS_Description', @value = " . $comment . ", @level0type = N'Schema', @level0name = " . q(get_schema()) . ", @level1type = N'Table', @level1name = " . q($name) . ", @level2type = N'Column', @level2name = " . q($key));
 		}
+		cache()->clear();
 		return true;
 	}
 
@@ -563,6 +653,7 @@ SQL);
 				return false;
 			}
 		}
+		cache()->clear();
 		return (!$index || queries("DROP INDEX " . implode(", ", $index)))
 			&& (!$drop || queries("ALTER TABLE " . table($table) . " DROP " . implode(", ", $drop)))
 		;
@@ -575,9 +666,40 @@ SQL);
 
 	function explain($connection, $query) {
 		$connection->query("SET SHOWPLAN_ALL ON");
-		$return = $connection->query($query);
+		$result = $connection->query($query);
 		$connection->query("SET SHOWPLAN_ALL OFF"); // connection is used also for indexes
-		return $return;
+        
+        $prettyRows = [];
+        $i = 0;
+        $overallCost = null;
+        while ($row = $result->fetch_assoc()) {
+            $i++;
+            if ($i === 1) {
+                $overallCost = $row['TotalSubtreeCost'] ?? 1;
+            }
+            $prettyRow = [
+                //'Cost' => round(($row['TotalSubtreeCost'] ?? 0), 2),
+                'Cost[%]' => round($row['TotalSubtreeCost'] / $overallCost * 100, 0),
+                'Rows' => intval($row['EstimateRows'])
+            ];
+            foreach ($row as $col => $val) {
+                switch (true) {
+                    case $col === 'StmtId':
+                    case $col === 'NodeId':
+                    case $col === 'Parent':
+                        continue 2;
+                    case is_float($val):
+                        $val = round($val, 2);
+                        break;
+                }
+                $prettyRow[$col] = $val;
+            }
+            if ($i === 1) {
+                $prettyRow['StmtText'] = "Whole statement";
+            }
+            $prettyRows[] = $prettyRow;
+        }
+        return new FakeResult($prettyRows);
 	}
 
 	function found_rows($table_status, $where) {
@@ -608,14 +730,17 @@ SQL);
 	}
 
 	function drop_views($views) {
+		cache()->clear();
 		return queries("DROP VIEW " . implode(", ", array_map('table', $views)));
 	}
 
 	function drop_tables($tables) {
+		cache()->clear();
 		return queries("DROP TABLE " . implode(", ", array_map('table', $tables)));
 	}
 
 	function move_tables($tables, $views, $target) {
+		cache()->clear();
 		return apply_queries("ALTER SCHEMA " . idf_escape($target) . " TRANSFER", array_merge($tables, $views));
 	}
 	
@@ -659,6 +784,7 @@ EXEC('ALTER TABLE {$targetTableFull} ADD CONSTRAINT PK_{$targetTableName} PRIMAR
 	        $connection->error = 'Cannot copy views in Microsoft SQL';
 	        return false;
 	    }
+		cache()->clear();
 	    return true;
 	}
 
@@ -731,6 +857,304 @@ WHERE sys1.xtype = 'TR' AND sys2.name = " . q($table)
 		return array();
 	}
 	
+	/**
+	 * Get SQL command to drop a table
+	 * 
+	 * @param string $table
+	 * @param bool $if_not_exists
+	 * @param bool $drop_constraints
+	 * @return string
+	 */
+	function drop_table_sql($table, $if_not_exists = false, $drop_dependencies = false)
+	{
+		$ns = get_schema();
+		if (! $ns) {
+			$ns = 'dbo';
+		} 
+	    $sql = $if_not_exists ? "IF OBJECT_ID ({$ns}.{$table}, N'U') IS NOT NULL\n" : '';
+	    if (! $drop_dependencies) {
+	       $sql .= "DROP TABLE [{$ns}].[{$table}]";
+	    } else {
+	       $sql .= <<<SQL
+BEGIN TRANSACTION;
+BEGIN TRY
+    -- Define the schema and table name to be dropped
+    DECLARE @SchemaName NVARCHAR(MAX) = '{$ns}';
+    DECLARE @TableName NVARCHAR(MAX) = '{$table}';
+    DECLARE @FullTableName NVARCHAR(MAX) = QUOTENAME(@SchemaName) + '.' + QUOTENAME(@TableName);
+
+    -- Drop foreign key constraints
+    DECLARE @Sql NVARCHAR(MAX);
+    SELECT @Sql = STRING_AGG(CONCAT('ALTER TABLE ', QUOTENAME(OBJECT_SCHEMA_NAME(parent_object_id)), '.', QUOTENAME(OBJECT_NAME(parent_object_id)), 
+                                    ' DROP CONSTRAINT ', QUOTENAME(name), ';'), ' ')
+    FROM sys.foreign_keys
+    WHERE parent_object_id = OBJECT_ID(@FullTableName);
+
+    IF @Sql IS NOT NULL
+        EXEC sp_executesql @Sql;
+
+    -- Drop primary key constraints
+    SELECT @Sql = STRING_AGG(CONCAT('ALTER TABLE ', QUOTENAME(OBJECT_SCHEMA_NAME(parent_object_id)), '.', QUOTENAME(OBJECT_NAME(parent_object_id)), 
+                                    ' DROP CONSTRAINT ', QUOTENAME(name), ';'), ' ')
+    FROM sys.key_constraints
+    WHERE parent_object_id = OBJECT_ID(@FullTableName) AND type = 'PK';
+
+    IF @Sql IS NOT NULL
+        EXEC sp_executesql @Sql;
+
+    -- Drop indexes
+    SELECT @Sql = STRING_AGG(CONCAT('DROP INDEX ', QUOTENAME(name), ' ON ', QUOTENAME(OBJECT_SCHEMA_NAME(object_id)), '.', QUOTENAME(OBJECT_NAME(object_id)), ';'), ' ')
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID(@FullTableName) AND name IS NOT NULL AND type > 0;
+
+    IF @Sql IS NOT NULL
+        EXEC sp_executesql @Sql;
+
+    -- Finally, drop the table
+    SET @Sql = CONCAT('DROP TABLE ', @FullTableName, ';');
+    EXEC sp_executesql @Sql;
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    ROLLBACK TRANSACTION;
+    PRINT ERROR_MESSAGE();
+END CATCH
+SQL;
+	    }
+	    return $sql;
+	}
+	
+	/**
+	 * Get SQL command to drop a view
+	 * 
+	 * @param string $table
+	 * @param boolean $if_not_exists
+	 * @return string
+	 */
+	function drop_view_sql($table, $if_not_exists = false)
+	{
+	    $t = table($table);
+	    $sql = $if_not_exists ? "IF OBJECT_ID ({$t}, N'V') IS NOT NULL\n" : '';
+	    $sql .= "DROP VIEW $t";
+	    return $sql;
+	}
+	
+	/** 
+	 * Get SQL command to create table
+	 * 
+	 * In the case of MS SQL there is no built-in function to do this, so we use an SQL script from here
+	 * https://stackoverflow.com/questions/706664/generate-sql-create-scripts-for-existing-tables-with-query.
+	 * 
+     * @param string
+     * @param bool
+     * @param string
+     * @return string
+	 */
+	function create_sql($table, $auto_increment, $style) {
+	    global $connection;
+		$tableQuoted = q((get_schema() ? get_schema() . '.' : '') . $table);
+	    $sql = <<<SQL
+
+DECLARE @table_name SYSNAME
+SELECT @table_name = {$tableQuoted}
+
+DECLARE 
+      @object_name SYSNAME
+    , @object_id INT
+
+SELECT 
+      @object_name = '[' + s.name + '].[' + o.name + ']'
+    , @object_id = o.[object_id]
+FROM sys.objects o WITH (NOWAIT)
+JOIN sys.schemas s WITH (NOWAIT) ON o.[schema_id] = s.[schema_id]
+WHERE s.name + '.' + o.name = @table_name
+    AND o.[type] = 'U'
+    AND o.is_ms_shipped = 0
+
+DECLARE @SQL NVARCHAR(MAX) = ''
+
+;WITH index_column AS 
+(
+    SELECT 
+          ic.[object_id]
+        , ic.index_id
+        , ic.is_descending_key
+        , ic.is_included_column
+        , c.name
+    FROM sys.index_columns ic WITH (NOWAIT)
+    JOIN sys.columns c WITH (NOWAIT) ON ic.[object_id] = c.[object_id] AND ic.column_id = c.column_id
+    WHERE ic.[object_id] = @object_id
+),
+fk_columns AS 
+(
+     SELECT 
+          k.constraint_object_id
+        , cname = c.name
+        , rcname = rc.name
+    FROM sys.foreign_key_columns k WITH (NOWAIT)
+    JOIN sys.columns rc WITH (NOWAIT) ON rc.[object_id] = k.referenced_object_id AND rc.column_id = k.referenced_column_id 
+    JOIN sys.columns c WITH (NOWAIT) ON c.[object_id] = k.parent_object_id AND c.column_id = k.parent_column_id
+    WHERE k.parent_object_id = @object_id
+)
+SELECT @SQL = 'CREATE TABLE ' + @object_name + CHAR(13) + '(' + CHAR(13) + STUFF((
+    SELECT CHAR(9) + ', [' + c.name + '] ' + 
+        CASE WHEN c.is_computed = 1
+            THEN 'AS ' + cc.[definition] 
+            ELSE UPPER(tp.name) + 
+                CASE WHEN tp.name IN ('varchar', 'char', 'varbinary', 'binary', 'text')
+                       THEN '(' + CASE WHEN c.max_length = -1 THEN 'MAX' ELSE CAST(c.max_length AS VARCHAR(5)) END + ')'
+                     WHEN tp.name IN ('nvarchar', 'nchar', 'ntext')
+                       THEN '(' + CASE WHEN c.max_length = -1 THEN 'MAX' ELSE CAST(c.max_length / 2 AS VARCHAR(5)) END + ')'
+                     WHEN tp.name IN ('datetime2', 'time2', 'datetimeoffset') 
+                       THEN '(' + CAST(c.scale AS VARCHAR(5)) + ')'
+                    WHEN tp.name IN ('decimal', 'numeric')
+                       THEN '(' + CAST(c.[precision] AS VARCHAR(5)) + ',' + CAST(c.scale AS VARCHAR(5)) + ')'
+                    ELSE ''
+                END +
+                CASE WHEN c.collation_name IS NOT NULL THEN ' COLLATE ' + c.collation_name ELSE '' END +
+                CASE WHEN c.is_nullable = 1 THEN ' NULL' ELSE ' NOT NULL' END +
+                CASE WHEN dc.[definition] IS NOT NULL THEN ' DEFAULT' + dc.[definition] ELSE '' END + 
+                CASE WHEN ic.is_identity = 1 THEN ' IDENTITY(' + CAST(ISNULL(ic.seed_value, '0') AS CHAR(1)) + ',' + CAST(ISNULL(ic.increment_value, '1') AS CHAR(1)) + ')' ELSE '' END 
+        END + CHAR(13)
+    FROM sys.columns c WITH (NOWAIT)
+    JOIN sys.types tp WITH (NOWAIT) ON c.user_type_id = tp.user_type_id
+    LEFT JOIN sys.computed_columns cc WITH (NOWAIT) ON c.[object_id] = cc.[object_id] AND c.column_id = cc.column_id
+    LEFT JOIN sys.default_constraints dc WITH (NOWAIT) ON c.default_object_id != 0 AND c.[object_id] = dc.parent_object_id AND c.column_id = dc.parent_column_id
+    LEFT JOIN sys.identity_columns ic WITH (NOWAIT) ON c.is_identity = 1 AND c.[object_id] = ic.[object_id] AND c.column_id = ic.column_id
+    WHERE c.[object_id] = @object_id
+    ORDER BY c.column_id
+    FOR XML PATH(''), TYPE).value('.', 'NVARCHAR(MAX)'), 1, 2, CHAR(9) + ' ')
+    + ISNULL((SELECT CHAR(9) + ', CONSTRAINT [' + k.name + '] PRIMARY KEY (' + 
+                    (SELECT STUFF((
+                         SELECT ', [' + c.name + '] ' + CASE WHEN ic.is_descending_key = 1 THEN 'DESC' ELSE 'ASC' END
+                         FROM sys.index_columns ic WITH (NOWAIT)
+                         JOIN sys.columns c WITH (NOWAIT) ON c.[object_id] = ic.[object_id] AND c.column_id = ic.column_id
+                         WHERE ic.is_included_column = 0
+                             AND ic.[object_id] = k.parent_object_id 
+                             AND ic.index_id = k.unique_index_id     
+                         FOR XML PATH(N''), TYPE).value('.', 'NVARCHAR(MAX)'), 1, 2, ''))
+            + ')' + CHAR(13)
+            FROM sys.key_constraints k WITH (NOWAIT)
+            WHERE k.parent_object_id = @object_id 
+                AND k.[type] = 'PK'), '') + ')'  + CHAR(13)
+    + ISNULL((SELECT (
+        SELECT CHAR(13) +
+             'ALTER TABLE ' + @object_name + ' WITH' 
+            + CASE WHEN fk.is_not_trusted = 1 
+                THEN ' NOCHECK' 
+                ELSE ' CHECK' 
+              END + 
+              ' ADD CONSTRAINT [' + fk.name  + '] FOREIGN KEY(' 
+              + STUFF((
+                SELECT ', [' + k.cname + ']'
+                FROM fk_columns k
+                WHERE k.constraint_object_id = fk.[object_id]
+                FOR XML PATH(''), TYPE).value('.', 'NVARCHAR(MAX)'), 1, 2, '')
+               + ')' +
+              ' REFERENCES [' + SCHEMA_NAME(ro.[schema_id]) + '].[' + ro.name + '] ('
+              + STUFF((
+                SELECT ', [' + k.rcname + ']'
+                FROM fk_columns k
+                WHERE k.constraint_object_id = fk.[object_id]
+                FOR XML PATH(''), TYPE).value('.', 'NVARCHAR(MAX)'), 1, 2, '')
+               + ')'
+            + CASE 
+                WHEN fk.delete_referential_action = 1 THEN ' ON DELETE CASCADE' 
+                WHEN fk.delete_referential_action = 2 THEN ' ON DELETE SET NULL'
+                WHEN fk.delete_referential_action = 3 THEN ' ON DELETE SET DEFAULT' 
+                ELSE '' 
+              END
+            + CASE 
+                WHEN fk.update_referential_action = 1 THEN ' ON UPDATE CASCADE'
+                WHEN fk.update_referential_action = 2 THEN ' ON UPDATE SET NULL'
+                WHEN fk.update_referential_action = 3 THEN ' ON UPDATE SET DEFAULT'  
+                ELSE '' 
+              END 
+            + CHAR(13) + 'ALTER TABLE ' + @object_name + ' CHECK CONSTRAINT [' + fk.name  + ']' + CHAR(13)
+        FROM sys.foreign_keys fk WITH (NOWAIT)
+        JOIN sys.objects ro WITH (NOWAIT) ON ro.[object_id] = fk.referenced_object_id
+        WHERE fk.parent_object_id = @object_id
+        FOR XML PATH(N''), TYPE).value('.', 'NVARCHAR(MAX)')), '')
+    + ISNULL(((SELECT
+         CHAR(13) + 'CREATE' + CASE WHEN i.is_unique = 1 THEN ' UNIQUE' ELSE '' END 
+                + ' NONCLUSTERED INDEX [' + i.name + '] ON ' + @object_name + ' (' +
+                STUFF((
+                SELECT ', [' + c.name + ']' + CASE WHEN c.is_descending_key = 1 THEN ' DESC' ELSE ' ASC' END
+                FROM index_column c
+                WHERE c.is_included_column = 0
+                    AND c.index_id = i.index_id
+                FOR XML PATH(''), TYPE).value('.', 'NVARCHAR(MAX)'), 1, 2, '') + ')'  
+                + ISNULL(CHAR(13) + 'INCLUDE (' + 
+                    STUFF((
+                    SELECT ', [' + c.name + ']'
+                    FROM index_column c
+                    WHERE c.is_included_column = 1
+                        AND c.index_id = i.index_id
+                    FOR XML PATH(''), TYPE).value('.', 'NVARCHAR(MAX)'), 1, 2, '') + ')', '')  + CHAR(13)
+        FROM sys.indexes i WITH (NOWAIT)
+        WHERE i.[object_id] = @object_id
+            AND i.is_primary_key = 0
+            AND i.[type] = 2
+        FOR XML PATH(''), TYPE).value('.', 'NVARCHAR(MAX)')
+    ), '')
+
+SELECT @SQL
+SQL;
+	    // Since these are multiple statements, use a multi-query and iterate through the results
+	    // ultimately using the return value of the last result (the `SELECT @SQL`).
+	    $connection->multi_query($sql);
+	    do {
+	        $result = $connection->store_result();
+	        $arr = $result->fetch_row();
+	    } while ($connection->next_result());
+	    
+	    /* TODO remove auto-increments here? Where are they in MS SQL anyway?
+	     * This is what was done in mysql.inc.php
+	    if (!$auto_increment) {
+	        $return = preg_replace('~ AUTO_INCREMENT=\d+~', '', $return); //! skip comments
+	    }*/
+	    return $arr[0];
+	}
+	
+	/** Get SQL commands to create triggers
+	 * @param string
+	 * @return string
+	 */
+	function trigger_sql($table) {
+	    /* TODO
+	    $return = "";
+	    foreach (get_rows("SHOW TRIGGERS LIKE " . q(addcslashes($table, "%_\\")), null, "-- ") as $row) {
+	        $return .= "\nCREATE TRIGGER " . idf_escape($row["Trigger"]) . " $row[Timing] $row[Event] ON " . table($row["Table"]) . " FOR EACH ROW\n$row[Statement];;\n";
+	    }
+	    return $return;
+	    */
+	    return '';
+	}
+	
+	/**
+	 * Use named foreign key constraints here to simplify using DDL statements in migrations scripts
+	 * 
+	 * @see editing.inc.php::format_foreign_key()
+	 * 
+	 * @param array $foreign_key
+	 * @return string
+	 */
+	function format_foreign_key($foreign_key) {
+	    global $on_actions;
+	    $db = $foreign_key["db"];
+	    $ns = $foreign_key["ns"];
+	    $fkName = 'FK_' . $foreign_key["source_table"] . '_' . $foreign_key["table"] . '_' . implode('_', $foreign_key["source"]);
+	    return " CONSTRAINT " . $fkName . " FOREIGN KEY (" . implode(", ", array_map('idf_escape', $foreign_key["source"])) . ") REFERENCES "
+	        . ($db != "" && $db != $_GET["db"] ? idf_escape($db) . "." : "")
+	        . ($ns != "" && $ns != $_GET["ns"] ? idf_escape($ns) . "." : "")
+	        . table($foreign_key["table"])
+	        . " (" . implode(", ", array_map('idf_escape', $foreign_key["target"])) . ")" //! reuse $name - check in older MySQL versions
+	        . (preg_match("~^($on_actions)\$~", $foreign_key["on_delete"]) ? " ON DELETE $foreign_key[on_delete]" : "")
+	        . (preg_match("~^($on_actions)\$~", $foreign_key["on_update"]) ? " ON UPDATE $foreign_key[on_update]" : "")
+	        ;
+	}
+	
 	function convert_field($field) {
 	    if (preg_match("~binary~", $field["type"])) {
 	        return "LOWER(CONVERT(VARCHAR(max), " . idf_escape($field["field"]) . ", 1))";
@@ -755,7 +1179,7 @@ WHERE sys1.xtype = 'TR' AND sys2.name = " . q($table)
 	}
 
 	function support($feature) {
-		return preg_match('~^(comment|columns|database|drop_col|indexes|descidx|scheme|sql|table|copy|trigger|view|view_trigger)$~', $feature); //! routine|
+		return preg_match('~^(comment|columns|database|drop_col|indexes|descidx|scheme|sql|table|copy|trigger|view|view_trigger|dump)$~', $feature); //! routine|
 	}
 
 	function driver_config() {
@@ -789,4 +1213,38 @@ WHERE sys1.xtype = 'TR' AND sys2.name = " . q($table)
 			),
 		);
 	}
+}
+
+class FakeResult
+{
+    private $rows = [];
+    private $fileds = [];
+    
+    function __construct(array $rows) {
+        $firstRow = reset($rows);
+        $this->rows = $rows;
+        $this->fields = array_keys($firstRow);
+    }
+    
+    function fetch_assoc()
+    {
+        $current = current($this->rows);
+        next($this->rows);
+        return $current;
+    }
+    function fetch_row()
+    {
+        return array_values($this->fetch_assoc());
+    }
+    
+    function fetch_field()
+    {
+        $col = current($this->fields);
+        $field = new stdClass();
+        $field->name = $col;
+        $field->orgname = $col;
+        $field->type = 0;
+        next($this->fields);
+        return $field;
+    }
 }
