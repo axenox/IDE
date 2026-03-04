@@ -304,11 +304,21 @@ class AdminerAPI extends InclusionAPI
         return $dump;
     }
     
-    public function runSql(string $sql) : array
+    public function runSql(SqlDataConnectorInterface $connector, string $sql) : array
     {
-        // TODO only allow SELECT queries - no DELETE, DROP, UPDATE, etc.
         global $adminer;
         global $connection;
+        $facadePath = $this->getApiUrlPath($connector);
+        // TODO only run adminer if it was not run yet during the current HTTP request.
+        $this->runAdminer($facadePath);
+
+        $tableArray = get_rows($sql);
+        
+        return $tableArray;
+        
+        // TODO only allow SELECT queries - no DELETE, DROP, UPDATE, etc.
+        $_POST[] = [];
+        $_POST["token"] = $this->getApiToken();
         $connection->multi_query($sql);
         $result = $connection->store_result();
         // TODO transform result to array

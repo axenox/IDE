@@ -5,6 +5,7 @@ use axenox\GenAI\AI\Agents\GenericAssistant;
 use axenox\GenAI\Exceptions\AiAgentRuntimeError;
 use axenox\GenAI\Factories\AiFactory;
 use axenox\GenAI\Interfaces\AiPromptInterface;
+use axenox\IDE\AI\Tools\CallSqlTool;
 use axenox\IDE\AI\Tools\GetSqlTableDdlTool;
 use exface\Core\CommonLogic\UxonObject;
 use exface\Core\Factories\DataConnectionFactory;
@@ -69,12 +70,19 @@ class SqlAdminAssistant extends GenericAssistant
         $customTools = [];
         foreach ($toolsUxon as $tool => $uxon) {
             $class = AiFactory::findToolClass($this->getWorkbench(), $tool, $uxon);
+            $class = ltrim($class, '\\');
             switch ($class) {
                 case GetSqlTableDdlTool::class:
                     if (! $uxon->hasProperty('name')) {
                         $uxon->setProperty('name', $tool);
                     }
                     $customTools[] = new GetSqlTableDdlTool($this->getWorkbench(), $this->getSqlConnection($prompt), $uxon);
+                    break;
+                case CallSqlTool::class:
+                    if (! $uxon->hasProperty('name')) {
+                        $uxon->setProperty('name', $tool);
+                    }
+                    $customTools[] = new CallSqlTool($this->getWorkbench(), $this->getSqlConnection($prompt), $uxon);
                     break;
                 default:
                     $otherUxon->append($uxon);
