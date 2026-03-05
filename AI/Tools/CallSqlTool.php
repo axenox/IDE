@@ -47,7 +47,8 @@ class CallSqlTool extends AbstractAiTool
     {
         $ideFacade = FacadeFactory::createFromString(IDEFacade::class, $this->getWorkbench());
         $adminerAPI = new AdminerAPI($this->getWorkbench(), $ideFacade->getUrlRouteDefault() . '/', 'adminer/', 'index.php', []);
-        return $adminerAPI->runSql($this->connection, $sql);
+        $array = $adminerAPI->runSql($this->connection, $sql);
+        return MarkdownDataType::buildMarkdownTableFromArray($array);
     }
 
     /**
