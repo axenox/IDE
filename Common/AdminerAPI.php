@@ -15,9 +15,9 @@ use Psr\Http\Message\ServerRequestInterface;
 class AdminerAPI extends InclusionAPI
 {
     const NO_PASSWROD = '12345678';
-    
+
     /**
-     * 
+     *
      * {@inheritDoc}
      * @see \Psr\Http\Server\RequestHandlerInterface::handle()
      */
@@ -28,10 +28,10 @@ class AdminerAPI extends InclusionAPI
         return $this->runAdminer($innerPath);
     }
 
-    
-    
+
+
     /**
-     * 
+     *
      * @param array $connectionConfig
      * @param string $connectorClass
      * @return array|NULL
@@ -93,7 +93,7 @@ class AdminerAPI extends InclusionAPI
         }
         return $this->getWorkbench()->getInstallationPath() . DIRECTORY_SEPARATOR . $path;
     }
-    
+
     /**
      *
      * @param string $connector
@@ -110,18 +110,18 @@ class AdminerAPI extends InclusionAPI
             'mongodb' => 'mongo',
             'elastic' => 'elastic'
         ];
-        
+
         foreach ($adminerDrivers as $key => $driver) {
             if (stripos($connector, $key) !== false) {
                 return $driver;
             }
         }
-        
+
         return null;
     }
-    
+
     /**
-     * 
+     *
      * @return string|NULL
      */
     protected function getAdminerDbInSession() : ?string
@@ -141,9 +141,9 @@ class AdminerAPI extends InclusionAPI
         }
         return null;
     }
-    
+
     /**
-     * 
+     *
      * @param string $pathInFacade
      * @throws UnexpectedValueException
      * @return ResponseInterface
@@ -168,11 +168,11 @@ class AdminerAPI extends InclusionAPI
                     case 'css':
                         $mimeType = 'text/css';
                         break;
-                        // read different file
+                    // read different file
                     case 'js':
                         $mimeType = 'text/javascript';
                         break;
-                        // read different file
+                    // read different file
                     Default:
                         $mimeType = mime_content_type($base.$file);
                         break;
@@ -180,7 +180,7 @@ class AdminerAPI extends InclusionAPI
                 $headers = $this->getHeadersCommon();
                 $headers['Content-Type'] = $mimeType;
                 return new Response(200, $headers, $stream);
-            case ! file_exists($base . $selector):   
+            case ! file_exists($base . $selector):
                 switch (true) {
                     case isset($_POST['logout']):
                         $_GET = [];
@@ -193,11 +193,11 @@ class AdminerAPI extends InclusionAPI
                         $dataSheet->getColumns()->addMultiple([
                             'CONFIG',
                             'CONNECTOR',
-                            'UID',  
+                            'UID',
                         ]);
-                        
+
                         $dataSheet->dataRead();
-                        
+
                         if (strcasecmp($selector, DataConnectionSelector::METAMODEL_CONNECTION_ALIAS) === 0 || strcasecmp($selector, DataConnectionSelector::METAMODEL_CONNECTION_UID) === 0) {
                             $config = $this->getWorkbench()->getCoreApp()->getConfig()->getOption('METAMODEL.CONNECTOR_CONFIG')->toArray();
                             $connector = $this->getWorkbench()->getCoreApp()->getConfig()->getOption('METAMODEL.CONNECTOR');
@@ -206,7 +206,7 @@ class AdminerAPI extends InclusionAPI
                             if ($row === null) {
                                 throw new UnexpectedValueException('Data connection "' . $selector . '" not found!');
                             }
-                            
+
                             if ($row['CONFIG'] ?? null) {
                                 $config = JsonDataType::decodeJson($row['CONFIG']);
                             } else {
@@ -214,11 +214,11 @@ class AdminerAPI extends InclusionAPI
                             }
                             $connector = $row['CONNECTOR'];
                         }
-                        
+
                         $_POST['auth'] = $this->getAdminerAuth($config, $connector);
                         break;
                 }
-                
+
                 // open Adminer
                 $html = $this->launchAdminer();
                 // IDEA replacing X-Frme-Options did not work well. Sometimes the headers are sent earlier.
@@ -228,8 +228,8 @@ class AdminerAPI extends InclusionAPI
                 $headers = headers_list();
                 $headers = array_merge($headers, $this->getHeadersCommon());
                 return new Response(200, $headers, $html);
-            
-                
+
+
             // read different files    
             default:
                 $file = $selector;
@@ -239,11 +239,11 @@ class AdminerAPI extends InclusionAPI
                     case 'css':
                         $mimeType = 'text/css';
                         break;
-                        // read different file
+                    // read different file
                     case 'js':
                         $mimeType = 'text/javascript';
                         break;
-                        // read different file
+                    // read different file
                     Default:
                         $mimeType = mime_content_type($base.$file);
                         break;
@@ -253,9 +253,9 @@ class AdminerAPI extends InclusionAPI
                 return new Response(200, $headers, $stream);
         }
     }
-    
+
     /**
-     * 
+     *
      * @return string|NULL
      */
     protected function launchAdminer() : ?string
@@ -275,9 +275,9 @@ class AdminerAPI extends InclusionAPI
 
     /**
      * Returns the DDL (CREATE script) for a given table or view
-     * 
+     *
      * Returns a comment with an error if the table or view was not found
-     * 
+     *
      * @param SqlDataConnectorInterface $connection
      * @param string $tableOrViewName
      * @param string|null $schema
@@ -288,8 +288,10 @@ class AdminerAPI extends InclusionAPI
     {
         global $adminer;
         $facadePath = $this->getApiUrlPath($connection, null, $schema);
-        // TODO only run adminer if it was not run yet during the current HTTP request.
-        $this->runAdminer($facadePath);
+        if($adminer == null){
+            $this->runAdminer($facadePath);
+        }
+
 
         $tableStatus = table_status($tableOrViewName);
         if (is_view($tableStatus)) {
@@ -303,19 +305,22 @@ class AdminerAPI extends InclusionAPI
         }
         return $dump;
     }
-    
+
     public function runSql(SqlDataConnectorInterface $connector, string $sql) : array
     {
         global $adminer;
         global $connection;
         $facadePath = $this->getApiUrlPath($connector);
-        // TODO only run adminer if it was not run yet during the current HTTP request.
-        $this->runAdminer($facadePath);
+        if($connection == null) {
+            // TODO only run adminer if it was not run yet during the current HTTP request.
+            $this->runAdminer($facadePath);
+        }
+
 
         $tableArray = get_rows($sql);
-        
+
         return $tableArray;
-        
+
         // TODO only allow SELECT queries - no DELETE, DROP, UPDATE, etc.
         $_POST[] = [];
         $_POST["token"] = $this->getApiToken();
@@ -323,7 +328,7 @@ class AdminerAPI extends InclusionAPI
         $result = $connection->store_result();
         // TODO transform result to array
     }
-    
+
     protected function getApiUrlPath(SqlDataConnectorInterface $connection, ?string $function = null, ?string $schema = null) : string
     {
         // adminer/suedlink_tpcde_db_azure_dev?mssql=kmtssqlsrvdev.database.windows.net&username=kmtsadmin&db=SuedLinkKmtsDev&ns=dbo&dump=
@@ -341,7 +346,7 @@ class AdminerAPI extends InclusionAPI
         }
         return $url;
     }
-    
+
     protected function isAuthenticated(array $adminerAuth) : bool
     {
         $server = ($_SESSION['db'] ?? [])['server'];
@@ -357,28 +362,28 @@ class AdminerAPI extends InclusionAPI
         }
         return true;
     }
-    
+
     protected function authenticate(array $adminerAuth)
     {
         $getVars = $_GET;
         $postVars = $_POST;
         $_GET = [];
         $_POST['auth'] = $adminerAuth;
-        
+
         $this->launchAdminer();
-        
+
         $_GET = $getVars;
         $_POST = $postVars;
-        
+
     }
 
     /**
      * Returns the Adminer CSRF token stored in the session
-     * 
+     *
      * Adminer uses CSRF tokens for every request. It seems, though, they are not required to call adminer functions
      * without processing an entire request. Should the CSRF token be required in future, you can find its logic in
      * `functions.inc.php` in `get_token()` and `verify_token()`.
-     * 
+     *
      * @return string
      */
     private function getApiToken() : string
