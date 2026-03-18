@@ -72,7 +72,7 @@
             "MODIFIED_BY_USER": "0x31000000000000000000000000000000",
             "UID": "0x11ef95123b4a074c9512025041000001",
             "OBJECT": "0x33380000000000000000000000000000",
-            "ACTION_PROTOTYPE": "exface/Core/Actions/ShowDialog.php",
+            "ACTION_PROTOTYPE": "exface/core/Actions/ShowDialog.php",
             "ALIAS": "ConnectionSqlAdmin",
             "NAME": "SQL admin",
             "SHORT_DESCRIPTION": "Opens a administration UI for SQL databases",

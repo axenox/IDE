@@ -145,6 +145,19 @@
 
 			if (fileCount <= 0) return;
 
+            if (e.target.matches('input[type="file"][name="upload[]"]')) {
+
+                var pattern = /^(?!\.)(?!.*\.\.)[A-Za-z0-9 \-._]+$/;
+
+                for (var file of e.target.files) {
+                    if (!pattern.test(file.name)) {
+                        atheos.toast.show('error', 'Filenames may contain Letters, Numbers, Dashes, Underscores,' +
+                            ' Spaces or Periods Only');
+                        return;
+                    }
+                }
+            }
+            
 			uploadName = (fileCount > 1) ? 'Batch Upload' : input.files[0].name;
 
 			var progressNode = oX('<div class="upload-progress"><div></div><span></span></div>');
@@ -183,6 +196,7 @@
 					input.value = '';
 				}
 			};
+
 			send.send(data);
 		},
 

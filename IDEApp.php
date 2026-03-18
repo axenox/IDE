@@ -25,6 +25,12 @@ class IDEApp extends App
         $facadeInstaller = new HttpFacadeInstaller($this->getSelector());
         $facadeInstaller->setFacade(FacadeFactory::createFromString(IDEFacade::class, $this->getWorkbench()));
         $container->addInstaller($facadeInstaller);
+
+        // Built-in AI agents
+        if (class_exists('\\axenox\\GenAI\\Common\\AiAgentInstaller')) {
+            $aiInstaller = new \axenox\GenAI\Common\AiAgentInstaller($this->getSelector());
+            $container->addInstaller($aiInstaller);
+        }
         
         return $container;
     }
