@@ -1,0 +1,170 @@
+{
+    "object_alias": "axenox.GenAI.AI_TEST_CASE",
+    "columns": [
+        {
+            "name": "_EXPORT_SUMMARY",
+            "hidden": true,
+            "attribute_alias": "NAME"
+        },
+        {
+            "name": "CREATED_ON",
+            "attribute_alias": "CREATED_ON"
+        },
+        {
+            "name": "MODIFIED_ON",
+            "attribute_alias": "MODIFIED_ON"
+        },
+        {
+            "name": "CREATED_BY_USER",
+            "attribute_alias": "CREATED_BY_USER"
+        },
+        {
+            "name": "MODIFIED_BY_USER",
+            "attribute_alias": "MODIFIED_BY_USER"
+        },
+        {
+            "name": "UID",
+            "attribute_alias": "UID"
+        },
+        {
+            "name": "LOCALE",
+            "attribute_alias": "LOCALE"
+        },
+        {
+            "name": "NAME",
+            "attribute_alias": "NAME"
+        },
+        {
+            "name": "CONTEXT",
+            "attribute_alias": "CONTEXT"
+        },
+        {
+            "name": "AUTOMATABLE_FLAG",
+            "attribute_alias": "AUTOMATABLE_FLAG"
+        },
+        {
+            "name": "AI_AGENT",
+            "attribute_alias": "AI_AGENT"
+        },
+        {
+            "name": "APP",
+            "attribute_alias": "APP"
+        },
+        {
+            "name": "PROMPT",
+            "attribute_alias": "PROMPT"
+        },
+        {
+            "name": "DESCRIPTION",
+            "attribute_alias": "DESCRIPTION"
+        }
+    ],
+    "rows": [
+        {
+            "_EXPORT_SUMMARY": "Wie erstelle ich ein Key",
+            "CREATED_ON": "2026-03-20 08:52:16",
+            "MODIFIED_ON": "2026-03-31 14:13:52",
+            "CREATED_BY_USER": "0x11e8fe1c902c8ebea23ee4b318306b9a",
+            "MODIFIED_BY_USER": "0x11e8fe1c902c8ebea23ee4b318306b9a",
+            "UID": "0x11f188bdb7021b4288bd025041000001",
+            "LOCALE": "",
+            "NAME": "Wie erstelle ich ein Key",
+            "CONTEXT": {
+                "object_alias": "exface.Core.CONNECTION",
+                "action_alias": "exface.Core.CONNECTION",
+                "input_data": {
+                    "object_alias": "exface.Core.CONNECTION",
+                    "rows": [
+                        {
+                            "UID": "0x11ea72c00f0fadeca3480205857feb80"
+                        }
+                    ]
+                }
+            },
+            "AUTOMATABLE_FLAG": 0,
+            "AI_AGENT": "0x11ef997726a6346a9977025041000001",
+            "APP": "0x11ed96509743e0c29650025041000001",
+            "PROMPT": "Wie erstelle ich ein Key",
+            "DESCRIPTION": ""
+        },
+        {
+            "_EXPORT_SUMMARY": "Tabelle erstellen",
+            "CREATED_ON": "2026-03-20 08:55:17",
+            "MODIFIED_ON": "2026-03-31 14:43:51",
+            "CREATED_BY_USER": "0x11e8fe1c902c8ebea23ee4b318306b9a",
+            "MODIFIED_BY_USER": "0x11e8fe1c902c8ebea23ee4b318306b9a",
+            "UID": "0x11f1a7cf22ffafa8a7cf025041000001",
+            "LOCALE": "",
+            "NAME": "Tabelle erstellen",
+            "CONTEXT": {
+                "object_alias": "exface.Core.CONNECTION",
+                "action_alias": "exface.Core.CONNECTION",
+                "input_data": {
+                    "object_alias": "exface.Core.CONNECTION",
+                    "rows": [
+                        {
+                            "UID": "0x11ea72c00f0fadeca3480205857feb80"
+                        }
+                    ]
+                }
+            },
+            "AUTOMATABLE_FLAG": 0,
+            "AI_AGENT": "0x11ef997726a6346a9977025041000001",
+            "APP": "0x11ed96509743e0c29650025041000001",
+            "PROMPT": "Sag mir was ich machen muss um für unsere User Hobbys anzulegen und die Hobbys auch noch getrennt Eigenschaften haben, wie Ort( enum Indoor, Outdoor, ...). Gib mir eine detaillierte Anleitung.",
+            "DESCRIPTION": ""
+        },
+        {
+            "_EXPORT_SUMMARY": "View erstellen",
+            "CREATED_ON": "2026-03-31 14:42:26",
+            "MODIFIED_ON": "2026-03-31 14:42:26",
+            "CREATED_BY_USER": "0x11e8fe1c902c8ebea23ee4b318306b9a",
+            "MODIFIED_BY_USER": "0x11e8fe1c902c8ebea23ee4b318306b9a",
+            "UID": "0x11f1aada125db9c6aada025041000001",
+            "LOCALE": "",
+            "NAME": "View erstellen",
+            "CONTEXT": {
+                "object_alias": "exface.Core.CONNECTION",
+                "action_alias": "exface.Core.CONNECTION",
+                "input_data": {
+                    "object_alias": "exface.Core.CONNECTION",
+                    "rows": [
+                        {
+                            "UID": "0x11ea72c00f0fadeca3480205857feb80"
+                        }
+                    ]
+                }
+            },
+            "AUTOMATABLE_FLAG": 0,
+            "AI_AGENT": "0x11ef997726a6346a9977025041000001",
+            "APP": "0x11ed96509743e0c29650025041000001",
+            "PROMPT": "Schreibe mir eine View um schnell alle unsere Nutzer mit allen Rollen zu sehen.",
+            "DESCRIPTION": ""
+        }
+    ],
+    "totals_rows": [],
+    "filters": {
+        "operator": "AND",
+        "base_object_alias": "axenox.GenAI.AI_TEST_CASE",
+        "conditions": [
+            {
+                "expression": "APP",
+                "comparator": "=",
+                "value": "0x11ed96509743e0c29650025041000001",
+                "object_alias": "axenox.GenAI.AI_TEST_CASE"
+            }
+        ]
+    },
+    "rows_limit": null,
+    "rows_offset": 0,
+    "sorters": [
+        {
+            "attribute_alias": "CREATED_ON",
+            "direction": "ASC"
+        },
+        {
+            "attribute_alias": "UID",
+            "direction": "ASC"
+        }
+    ]
+}
