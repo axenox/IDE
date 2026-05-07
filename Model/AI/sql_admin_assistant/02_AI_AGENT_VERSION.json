@@ -152,7 +152,7 @@
         {
             "_EXPORT_SUMMARY": "SQL admin assistant v2.00",
             "CREATED_ON": "2026-01-20 19:42:21",
-            "MODIFIED_ON": "2026-01-20 19:42:21",
+            "MODIFIED_ON": "2026-05-07 13:35:29",
             "CREATED_BY_USER": "0x31000000000000000000000000000000",
             "MODIFIED_BY_USER": "0x31000000000000000000000000000000",
             "UID": "0x11f0adfbc15b1aecadfb025041000001",
@@ -215,6 +215,100 @@
                 }
             },
             "VERSION": 2,
+            "DESCRIPTION": "",
+            "AI_AGENT": "0x11ef997726a6346a9977025041000001",
+            "ENABLED_FLAG": 1
+        },
+        {
+            "_EXPORT_SUMMARY": "SQL admin assistant v3.00",
+            "CREATED_ON": "2026-05-07 13:39:40",
+            "MODIFIED_ON": "2026-05-07 17:39:59",
+            "CREATED_BY_USER": "0x31000000000000000000000000000000",
+            "MODIFIED_BY_USER": "0x31000000000000000000000000000000",
+            "UID": "0x11f18af46f0330c68af4025041000001",
+            "PROTOTYPE_CLASS": "axenox/ide/AI/Agents/SqlAdminAssistant.php",
+            "DATA_CONNECTION_DEFAULT": null,
+            "CONFIG_UXON": {
+                "instructions": [
+                    "// Multiline text delimited by `\n`",
+                    "# Role and objectives",
+                    "",
+                    "You are an SQL expert and will help to modify and query the following SQL database. You will answer questions about the structure of the database, help write SQL queries and SQL migrations.",
+                    "",
+                    "The SQL DB is [#~sql_dialect#]. The tables are described in DBML below. To get more details, use the `get_sql_create_table` tool: it will give you the `CREATE` script for a specific table including constraints, foreign keys, exact data types, etc.",
+                    "",
+                    "# General instructions",
+                    "",
+                    "- Only use data that has been given to you in the DMBL. You are not allowed to make anything up!",
+                    "- Return the SQL statement and an explanation. Do not attempt to execute the SQL.",
+                    "- Use table aliases whereever possible to avoid ambiguous column errors.",
+                    "- Answer using the locale: \"[#=User('LOCALE')#]\".",
+                    "",
+                    "[#migrations_instructions#]",
+                    "",
+                    "# DBML schema of the database: ",
+                    "",
+                    "```",
+                    "[#metamodel_dbml#] ",
+                    "```",
+                    "",
+                    "# Background",
+                    "",
+                    "The database is used by our no-code platform for business web apps. The DB schema is managed on a DEV installation and then deployed to client installations automatically. This is why migrations are important.",
+                    "",
+                    "[#workbench_intro#]"
+                ],
+                "tools": {
+                    "get_sql_create_table": {
+                        "description": "Returns the DDL statement to create the given table including foreign keys and constraints",
+                        "arguments": [
+                            {
+                                "name": "table_name",
+                                "description": "Name of the table without schema prefix",
+                                "data_type": {
+                                    "alias": "exface.Core.String"
+                                }
+                            },
+                            {
+                                "name": "schema",
+                                "data_type": {
+                                    "alias": "exface.Core.String"
+                                }
+                            }
+                        ]
+                    }
+                },
+                "concepts": {
+                    "metamodel_dbml": {
+                        "class": "\\axenox\\GenAI\\AI\\Concepts\\SqlDbmlConcept",
+                        "object_filters": {
+                            "operator": "AND",
+                            "conditions": [
+                                {
+                                    "expression": "DATA_SOURCE__CONNECTION",
+                                    "comparator": "==",
+                                    "value": "[#~input:UID#]"
+                                }
+                            ]
+                        }
+                    },
+                    "migrations_instructions": {
+                        "class": "\\axenox\\GenAI\\AI\\Concepts\\MarkdownFilesConcept",
+                        "heading_level": 1,
+                        "strip_front_matter": true,
+                        "file_paths": [
+                            "exface/core/.github/instructions/sql-migrations.instructions.md"
+                        ]
+                    },
+                    "workbench_intro": {
+                        "class": "\\axenox\\GenAI\\AI\\Concepts\\AppDocsConcept",
+                        "depth": 0,
+                        "app_alias": "exface.Core",
+                        "starting_page": "Getting_started/introduction.md"
+                    }
+                }
+            },
+            "VERSION": 3,
             "DESCRIPTION": "",
             "AI_AGENT": "0x11ef997726a6346a9977025041000001",
             "ENABLED_FLAG": 1
