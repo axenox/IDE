@@ -114,7 +114,7 @@
         {
             "_EXPORT_SUMMARY": "AI SQL assistant in SQL admin",
             "CREATED_ON": "2024-12-13 22:09:40",
-            "MODIFIED_ON": "2026-01-23 13:38:15",
+            "MODIFIED_ON": "2026-05-13 13:05:28",
             "CREATED_BY_USER": "0x31000000000000000000000000000000",
             "MODIFIED_BY_USER": "0x31000000000000000000000000000000",
             "UID": "0x11ef9ac692a5712e9ac6025041000001",
@@ -134,7 +134,15 @@
                             "widget_type": "axenox.GenAI.AIChat",
                             "agent_alias": "axenox.IDE.sql_admin_assistant",
                             "attribute_alias": "UID",
-                            "intro_message": "Ask me to write SQL statements or analyse pasted SQL. I know the DB schema, but cannot execute SQL myself."
+                            "intro_message": [
+                                "// Multiline text delimited by `\n`",
+                                "I can help you write SQL statements, migrations or analyse pasted SQL. I know the DB schema, but cannot execute SQL myself. ",
+                                "",
+                                "You can ask me:",
+                                "",
+                                "- `Write SQL migrations for my.AppAlias: <SQL snippet or description here>`",
+                                "- `Why is this statement slow: <past sql>`"
+                            ]
                         }
                     ]
                 }
