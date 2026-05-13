@@ -222,7 +222,7 @@
         {
             "_EXPORT_SUMMARY": "SQL admin assistant v3.00",
             "CREATED_ON": "2026-05-07 13:39:40",
-            "MODIFIED_ON": "2026-05-07 17:39:59",
+            "MODIFIED_ON": "2026-05-13 11:38:22",
             "CREATED_BY_USER": "0x31000000000000000000000000000000",
             "MODIFIED_BY_USER": "0x31000000000000000000000000000000",
             "UID": "0x11f18af46f0330c68af4025041000001",
@@ -236,6 +236,22 @@
                     "You are an SQL expert and will help to modify and query the following SQL database. You will answer questions about the structure of the database, help write SQL queries and SQL migrations.",
                     "",
                     "The SQL DB is [#~sql_dialect#]. The tables are described in DBML below. To get more details, use the `get_sql_create_table` tool: it will give you the `CREATE` script for a specific table including constraints, foreign keys, exact data types, etc.",
+                    "",
+                    "## Typical tasks",
+                    "",
+                    "### Write SQL migrations",
+                    "",
+                    "Users will ask you to write SQL migrtaions. In this case:",
+                    "",
+                    "- You must follow the migration instruction below",
+                    "- Determine the app, you are working on and its folder. If you know the app alias, derive the folder from it by replacing `.` with `/` and making it all lowercased: e.g. app `exface.Core` resides in `exface/core` folder. If no app was specified, ask the user.",
+                    "- Use the `read_sql_migrations_folder` tool to get existing migrations and the available versions of the app. E.g. `read_sql_migrations_folder(\"exface/core/Install/Sql\")` will give you all SQL DBs supported by the `exface.Core` app and their migrations per version.",
+                    "- Use the `write_sql_migration` tool to create new migration files.",
+                    "- You must create migrations for every supported DB type, although the user will mostly provide only an example for one of them.",
+                    "",
+                    "### Improve performance of SQL queries",
+                    "",
+                    "Users may ask you to analyze and improve performance for SQL queries. Since the DBML schema does not include information about indexes and constraints, use the `get_sql_create_table` tool to get the full CREATE DDL for the tables, that you need.",
                     "",
                     "# General instructions",
                     "",
@@ -260,6 +276,7 @@
                 ],
                 "tools": {
                     "get_sql_create_table": {
+                        "alias": "axenox.IDE.GetSqlTableDdlTool",
                         "description": "Returns the DDL statement to create the given table including foreign keys and constraints",
                         "arguments": [
                             {
@@ -276,11 +293,66 @@
                                 }
                             }
                         ]
+                    },
+                    "read_sql_migrations_folder": {
+                        "alias": "axenox.GenAI.ReadFolderTool",
+                        "description": "List existing files and foders in the Install/Sql folder of an app. This tool can only read contents the Install/Sql folder! Apps are installed in a folder named after their alias in lower case: e.g. `exface.Core` -> `exface/core`.",
+                        "allowed_paths": [
+                            "*/*/Install/Sql/*"
+                        ],
+                        "arguments": [
+                            {
+                                "name": "path",
+                                "description": "Path to the desired folder relative to `vendor`: e.g. `exface/core/Install/Sql` or `exface/core/Install/Sql/MySQL/Migrations`",
+                                "data_type": {
+                                    "alias": "exface.Core.Markdown"
+                                }
+                            }
+                        ]
+                    },
+                    "write_sql_migration": {
+                        "alias": "axenox.GenAI.WriteFileTool",
+                        "description": "Replaces the given file with new contents. Only files in the apps `Install/Sql` folders accessible!",
+                        "allowed_paths": [
+                            "*/*/Install/Sql/*.sql"
+                        ],
+                        "arguments": [
+                            {
+                                "name": "path",
+                                "description": "Path to the file relative to the vendor folder: e.g. `exface/core/Install/Sql/MySQL/Migrations/1.35/20260127_1035_1_NEW_attribute_icons_abbrevations.sql`",
+                                "data_type": {
+                                    "alias": "exface.Core.String"
+                                }
+                            },
+                            {
+                                "name": "content",
+                                "description": "SQL for the migration or static SQL",
+                                "data_type": {
+                                    "alias": "exface.Core.String"
+                                }
+                            }
+                        ]
+                    },
+                    "read_sql_migration": {
+                        "alias": "axenox.GenAI.ReadFileTool",
+                        "description": "Replaces the given file with new contents. Only files in the apps `Install/Sql` folders accessible!",
+                        "allowed_paths": [
+                            "*/*/Install/Sql/*.sql"
+                        ],
+                        "arguments": [
+                            {
+                                "name": "path",
+                                "description": "Path to the file relative to the vendor folder: e.g. `exface/core/Install/Sql/MySQL/Migrations/1.35/20260127_1035_1_NEW_attribute_icons_abbrevations.sql`",
+                                "data_type": {
+                                    "alias": "exface.Core.String"
+                                }
+                            }
+                        ]
                     }
                 },
                 "concepts": {
                     "metamodel_dbml": {
-                        "class": "\\axenox\\GenAI\\AI\\Concepts\\SqlDbmlConcept",
+                        "alias": "axenox.GenAI.SqlDbmlConcept",
                         "object_filters": {
                             "operator": "AND",
                             "conditions": [
@@ -293,7 +365,7 @@
                         }
                     },
                     "migrations_instructions": {
-                        "class": "\\axenox\\GenAI\\AI\\Concepts\\MarkdownFilesConcept",
+                        "alias": "axenox.GenAI.MarkdownFilesConcept",
                         "heading_level": 1,
                         "strip_front_matter": true,
                         "file_paths": [
