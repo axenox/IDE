@@ -2,10 +2,12 @@
 namespace axenox\IDE\AI\Tools;
 
 use axenox\GenAI\Common\AbstractAiTool;
+use axenox\GenAI\Common\AiToolResultString;
 use axenox\GenAI\Exceptions\AiToolRuntimeError;
 use axenox\GenAI\Interfaces\AiAgentInterface;
 use axenox\GenAI\Interfaces\AiPromptInterface;
 use axenox\GenAI\Interfaces\AiToolInterface;
+use axenox\GenAI\Interfaces\AiToolResultInterface;
 use axenox\IDE\AI\Agents\SqlAdminAssistant;
 use axenox\IDE\Common\AdminerAPI;
 use axenox\IDE\Facades\IDEFacade;
@@ -27,11 +29,12 @@ class CallSqlTool extends AbstractAiTool
      * {@inheritDoc}
      * @see AiToolInterface::invoke()
      */
-    public function invoke(AiAgentInterface $agent, AiPromptInterface $prompt, array $arguments): string
+    public function invoke(AiAgentInterface $agent, AiPromptInterface $prompt, array $arguments): AiToolResultInterface
     {
         list($statement, $connectionAlias) = $arguments;
         
-        return $this->callSQL($statement, $this->getConnection($agent, $prompt, $connectionAlias));
+        $result = $this->callSQL($statement, $this->getConnection($agent, $prompt, $connectionAlias));
+        return new AiToolResultString($this, $arguments, $result, $this->getReturnDataType());
     }
     
     protected function getConnection(AiAgentInterface $agent, AiPromptInterface $prompt, ?string $connectionAlias = null) : SqlDataConnectorInterface
@@ -44,7 +47,7 @@ class CallSqlTool extends AbstractAiTool
                 $connection = $agent->getSqlConnection($prompt);
                 break;
             default:
-                throw new AiToolRuntimeError($this, 'No connection provided for CallSqlTool');
+                throw new AiToolRuntimeError($this, $prompt, 'No connection provided for CallSqlTool');
         }
         return $connection;
     }
