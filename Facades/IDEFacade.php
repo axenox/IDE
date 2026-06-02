@@ -97,7 +97,7 @@ class IDEFacade extends AbstractHttpFacade
             config: $config = CodiwareConfig::fromArray($config),
             responseFactory: $factory,
             streamFactory: $factory,
-            logger: null,
+            logger: $this->getWorkbench()->getLogger(),
             userContext: new UserContext($user->getUsername(), $user->getEmail(), $user->getUid()),
             basePath: $apiUriPath
         );
