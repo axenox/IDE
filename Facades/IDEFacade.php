@@ -69,12 +69,19 @@ class IDEFacade extends AbstractHttpFacade
         $apiUriPath = $baseUriPath . $this->getUrlRouteDefault() . '/codiware';
         $vendorFolder = $this->getWorkbench()->filemanager()->getPathToVendorFolder();
 
+        if ($this->getConfig()->getOption('FACADE.BUST_BROWSER_CACHE') === true) {
+            $assetVersion = date('YmdHis');
+        } else {
+            $assetVersion = str_replace(['-', ' ', ':'], '', $this->getWorkbench()->getContext()->getScopeInstallation()->getVariable('last_metamodel_install') ?? '');
+        }
+
         $config = [
             'URL_BASE' => $baseUriPath,
             'URL_TO_API' => $this->getUrlRouteDefault() . '/codiware',
             'URL_TO_APP' => '/vendor/kabachello/codiware/public',
             'URL_TO_NPM' => '/vendor/npm-asset',
             'BASE_FOLDER' => $vendorFolder,
+            'CACHE_BUST' => $assetVersion,
             "EXTENSIONS.CONFIG" => [
                 "codiware.markdown" => [
                     "INCLUDES.EDITOR_JS" => $baseUriPath . "vendor/exface/jeasyuifacade/Facades/js/toastui-editor-all.min.js"
