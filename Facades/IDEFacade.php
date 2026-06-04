@@ -2,9 +2,17 @@
 namespace axenox\IDE\Facades;
 
 use axenox\IDE\Common\AdminerAPI;
+use exface\Core\Exceptions\Facades\FacadeRoutingError;
+use exface\Core\Interfaces\Selectors\AliasSelectorInterface;
+use GuzzleHttp\Psr7\Uri;
+use kabachello\Codiware\Middleware\CodiwareMiddleware;
+use kabachello\Codiware\Middleware\CodiwareConfig;
+use kabachello\Codiware\Middleware\UserContext;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 use exface\Core\Facades\AbstractHttpFacade\AbstractHttpFacade;
+use GuzzleHttp\Psr7\HttpFactory;
 use GuzzleHttp\Psr7\Response;
 use exface\Core\DataTypes\StringDataType;
 use axenox\IDE\Common\AtheosAPI;
@@ -27,6 +35,8 @@ class IDEFacade extends AbstractHttpFacade
         $pathInFacade = mb_strtolower(StringDataType::substringAfter($path, $this->getUrlRouteDefault() . '/'));
         
         switch (true) {     
+            case StringDataType::startsWith($pathInFacade, 'codiware/'):
+                return $this->createResponseFromCodiware($request, $pathInFacade);
             // Autologin via function runAdminer
             case StringDataType::startsWith($pathInFacade, 'adminer/'):
             case StringDataType::startsWith($pathInFacade, 'externals/'):
@@ -41,6 +51,73 @@ class IDEFacade extends AbstractHttpFacade
         
         return new Response(404, $this->buildHeadersCommon(), 'Nothing here yet!');
   
+    }
+
+    /**
+     * Mount the Codiware PSR-15 middleware under /api/ide/codiware.
+     */
+    protected function createResponseFromCodiware(ServerRequestInterface $request, string $pathInFacade) : ResponseInterface
+    {
+        if (! class_exists(CodiwareMiddleware::class)) {
+            return new Response(503, $this->buildHeadersCommon(), 'Codiware package is not installed.');
+        }
+
+        $pathInFacade = StringDataType::substringAfter($request->getUri()->getPath(), $this->getUrlRouteDefault() . '/');
+        $user = $this->getWorkbench()->getSecurity()->getAuthenticatedUser();
+        $absUriToAPI = new Uri($this->getWorkbench()->getUrl());
+        $baseUriPath = $absUriToAPI->getPath();
+        $apiUriPath = $baseUriPath . $this->getUrlRouteDefault() . '/codiware';
+        $vendorFolder = $this->getWorkbench()->filemanager()->getPathToVendorFolder();
+
+        $config = [
+            'URL_BASE' => $baseUriPath,
+            'URL_TO_API' => $this->getUrlRouteDefault() . '/codiware',
+            'URL_TO_APP' => '/vendor/kabachello/codiware/public',
+            'URL_TO_NPM' => '/vendor/npm-asset',
+            'BASE_FOLDER' => $vendorFolder,
+            "EXTENSIONS.CONFIG" => [
+                "codiware.markdown" => [
+                    "INCLUDES.EDITOR_JS" => $baseUriPath . "vendor/exface/jeasyuifacade/Facades/js/toastui-editor-all.min.js"
+                ]
+            ]
+        ];
+        
+        if (StringDataType::startsWith($pathInFacade, 'codiware/repo/')) {
+            $appAlias = StringDataType::substringBefore(StringDataType::substringAfter($pathInFacade, 'codiware/repo/'), '/', '');
+            if ($appAlias === '') {
+                throw new FacadeRoutingError('No app alias specified in URL - expected format: /api/ide/codiware/repo/{appAlias}/...');
+            }
+            $appFolder = str_replace(AliasSelectorInterface::ALIAS_NAMESPACE_DELIMITER, '/', $appAlias);
+            $config['ALLOWED_ROOTS'] = [$appFolder];
+            $request = $request->withUri($request->getUri()->withPath(str_replace($appAlias, $appFolder, $request->getUri()->getPath())));
+        }
+        
+        $factory = new HttpFactory();
+        $middleware = new CodiwareMiddleware(
+            config: $config = CodiwareConfig::fromArray($config),
+            responseFactory: $factory,
+            streamFactory: $factory,
+            logger: $this->getWorkbench()->getLogger(),
+            userContext: new UserContext($user->getUsername(), $user->getEmail(), $user->getUid()),
+            basePath: $apiUriPath
+        );
+
+        $passThrough = new class($this->buildHeadersCommon()) implements RequestHandlerInterface {
+
+            private array $headers;
+
+            public function __construct(array $headers)
+            {
+                $this->headers = $headers;
+            }
+
+            public function handle(ServerRequestInterface $request): ResponseInterface
+            {
+                return new Response(404, $this->headers, 'Nothing here yet!');
+            }
+        };
+
+        return $middleware->process($request, $passThrough);
     }
 
     /**
