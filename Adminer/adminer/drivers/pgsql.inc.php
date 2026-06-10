@@ -608,6 +608,47 @@ ORDER BY connamespace, conname") as $row) {
 		return true;
 	}
 
+	/**
+	 * Copy tables and views to another schema
+	 *
+	 * Tables are copied without their data - only the structure (columns, defaults,
+	 * constraints and indexes) is duplicated via CREATE TABLE ... (LIKE ... INCLUDING ALL).
+	 *
+	 * @param array
+	 * @param array
+	 * @param string
+	 * @return bool
+	 */
+	function copy_tables($tables, $views, $target) {
+		$schema = get_schema();
+		foreach ($tables as $table) {
+			$target_table = ($target == $schema
+				? table("{$table}_copy")
+				: idf_escape($target) . "." . table($table)
+			);
+			if (
+				($_POST["overwrite"] && !queries("DROP TABLE IF EXISTS $target_table"))
+				|| !queries("CREATE TABLE $target_table (LIKE " . table($table) . " INCLUDING ALL)")
+			) {
+				return false;
+			}
+		}
+		foreach ($views as $table) {
+			$target_view = ($target == $schema
+				? table("{$table}_copy")
+				: idf_escape($target) . "." . table($table)
+			);
+			$view = view($table);
+			if (
+				($_POST["overwrite"] && !queries("DROP VIEW IF EXISTS $target_view"))
+				|| !queries("CREATE VIEW $target_view AS $view[select]")
+			) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 	function trigger($name, $table) {
 		if ($name == "") {
 			return array("Statement" => "EXECUTE PROCEDURE ()");
@@ -873,7 +914,7 @@ AND typelem = 0"
 	}
 
 	function support($feature) {
-		return preg_match('~^(database|table|columns|sql|indexes|descidx|comment|view|' . (min_version(9.3) ? 'materializedview|' : '') . 'scheme|routine|processlist|sequence|trigger|type|variables|drop_col|kill|dump)$~', $feature);
+		return preg_match('~^(database|table|columns|copy|sql|indexes|descidx|comment|view|' . (min_version(9.3) ? 'materializedview|' : '') . 'scheme|routine|processlist|sequence|trigger|type|variables|drop_col|kill|dump)$~', $feature);
 	}
 
 	function kill_process($val) {
