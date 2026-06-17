@@ -2,6 +2,7 @@
 	"FACADE.HEADERS.CONTENT_SECURITY_POLICY.DEFAULT_SRC": "'self' 'unsafe-eval' 'unsafe-inline'",
 	"FACADE.HEADERS.CONTENT_SECURITY_POLICY.CONNECT_SRC": "'self'",
 	"FACADE.HEADERS.CONTENT_SECURITY_POLICY.SCRIPT_SRC": "'self' 'unsafe-eval' 'unsafe-inline'",
+	"FACADE.HEADERS.CONTENT_SECURITY_POLICY.WORKER_SRC": "'self' 'unsafe-eval' 'unsafe-inline' blob:",
 	"FACADE.HEADERS.CONTENT_SECURITY_POLICY.SCRIPT_SRC_ELEM": "'self' 'unsafe-inline' blob:",
 	"FACADE.HEADERS.CONTENT_SECURITY_POLICY.FONT_SRC": "'self' 'unsafe-eval' 'unsafe-inline' blob: data:",
 	"FACADE.HEADERS.CONTENT_SECURITY_POLICY.IMG_SRC": "* 'self' 'unsafe-inline' blob: data: filesystem:",
