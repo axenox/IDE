@@ -84,7 +84,12 @@ class IDEFacade extends AbstractHttpFacade
             'CACHE_BUST' => $assetVersion,
             "EXTENSIONS.CONFIG" => [
                 "codiware.markdown" => [
-                    "INCLUDES.EDITOR_JS" => $baseUriPath . "vendor/exface/jeasyuifacade/Facades/js/toastui-editor-all.min.js"
+                    "INCLUDES.EDITOR_JS" => $baseUriPath . "vendor/exface/jeasyuifacade/Facades/js/toastui-editor-all.min.js",
+                    "INCLUDES.PREVIEW_CSS" => [
+                        "npm-asset/github-markdown-css/github-markdown.css",
+                        "exface/core/Facades/DocsFacade/template.css"
+                    ],
+                    'CSS_CLASS_FOR_PREVIEW_CONTAINER' => 'markdown-body'
                 ]
             ]
         ];
