@@ -239,7 +239,7 @@
                         "description": "Gives you the current server time an date"
                     },
                     "read_sql_migration": {
-                        "alias": "axenox.GenAI.ReadFileTool",
+                        "alias": "axenox.GenAI.FileReadTool",
                         "arguments": [
                             {
                                 "name": "path",
@@ -255,7 +255,7 @@
                         ]
                     },
                     "write_sql_migration": {
-                        "alias": "axenox.GenAI.WriteFileTool",
+                        "alias": "axenox.GenAI.FileWriteTool",
                         "arguments": [
                             {
                                 "name": "path",
@@ -297,7 +297,7 @@
                         "description": "Returns the DDL statement to create the given table including foreign keys and constraints"
                     },
                     "read_sql_migrations_folder": {
-                        "alias": "axenox.GenAI.ReadFolderTool",
+                        "alias": "axenox.GenAI.FolderReadTool",
                         "arguments": [
                             {
                                 "name": "path",
