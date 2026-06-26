@@ -61,102 +61,9 @@
     ],
     "rows": [
         {
-            "_EXPORT_SUMMARY": "SQL admin assistant v1",
-            "CREATED_ON": "2024-09-17 13:29:49",
-            "MODIFIED_ON": "2025-09-25 00:54:16",
-            "CREATED_BY_USER": "0x31000000000000000000000000000000",
-            "MODIFIED_BY_USER": "0x31000000000000000000000000000000",
-            "UID": "0x11ef997726a6346a9977025041000001",
-            "PROTOTYPE_CLASS": "axenox/genai/AI/Agents/GenericAssistant.php",
-            "DATA_CONNECTION_DEFAULT": null,
-            "CONFIG_UXON": {
-                "concepts": {
-                    "metamodel_dbml": {
-                        "class": "\\axenox\\GenAI\\AI\\Concepts\\SqlDbmlConcept",
-                        "object_filters": {
-                            "operator": "AND",
-                            "conditions": [
-                                {
-                                    "value": "[#~input:UID#]",
-                                    "comparator": "==",
-                                    "expression": "DATA_SOURCE__CONNECTION"
-                                }
-                            ]
-                        }
-                    }
-                }
-            },
-            "VERSION": 1,
-            "DESCRIPTION": "",
-            "AI_AGENT": "0x11ef997726a6346a9977025041000001",
-            "ENABLED_FLAG": 0,
-            "INSTRUCTIONS": [
-                "// Multiline text delimited by `\n`",
-                "You will help to modify and query a SQL database. will answer questions about the structure of the following database and will help write SQL. ",
-                "",
-                "Only use data that has been given to you in the DMBL. You are not allowed to make anything up!",
-                "",
-                "Here is the DB schema in DBML: ",
-                "",
-                "```",
-                "[#metamodel_dbml#] ",
-                "```",
-                "",
-                "Answer using the locale: \"[#=User('LOCALE')#]\"."
-            ]
-        },
-        {
-            "_EXPORT_SUMMARY": "SQL admin assistant v1.01",
-            "CREATED_ON": "2025-09-25 00:52:19",
-            "MODIFIED_ON": "2026-01-20 19:42:46",
-            "CREATED_BY_USER": "0x31000000000000000000000000000000",
-            "MODIFIED_BY_USER": "0x31000000000000000000000000000000",
-            "UID": "0x11f0b5e7202c3964b5e7025041000001",
-            "PROTOTYPE_CLASS": "axenox/genai/AI/Agents/GenericAssistant.php",
-            "DATA_CONNECTION_DEFAULT": null,
-            "CONFIG_UXON": {
-                "concepts": {
-                    "metamodel_dbml": {
-                        "class": "\\axenox\\GenAI\\AI\\Concepts\\SqlDbmlConcept",
-                        "object_filters": {
-                            "operator": "AND",
-                            "conditions": [
-                                {
-                                    "value": "[#~input:UID#]",
-                                    "comparator": "==",
-                                    "expression": "DATA_SOURCE__CONNECTION"
-                                }
-                            ]
-                        }
-                    }
-                }
-            },
-            "VERSION": 1.01,
-            "DESCRIPTION": "",
-            "AI_AGENT": "0x11ef997726a6346a9977025041000001",
-            "ENABLED_FLAG": 0,
-            "INSTRUCTIONS": [
-                "// Multiline text delimited by `\n`",
-                "You will help to modify and query a SQL database. will answer questions about the structure of the following database and will help write SQL. ",
-                "",
-                "## Instructions",
-                "",
-                "- Only use data that has been given to you in the DMBL. You are not allowed to make anything up!",
-                "- Return the SQL statement and an explanation. Do not attempt to execute the SQL.",
-                "- Use table aliases whereever possible to avoid ambiguous column errors.",
-                "- Answer using the locale: \"[#=User('LOCALE')#]\".",
-                "",
-                "## DBML schema of the database: ",
-                "",
-                "```",
-                "[#metamodel_dbml#] ",
-                "```"
-            ]
-        },
-        {
             "_EXPORT_SUMMARY": "SQL admin assistant v2.00",
             "CREATED_ON": "2026-01-20 19:42:21",
-            "MODIFIED_ON": "2026-05-07 13:35:29",
+            "MODIFIED_ON": "2026-06-26 07:57:26",
             "CREATED_BY_USER": "0x31000000000000000000000000000000",
             "MODIFIED_BY_USER": "0x31000000000000000000000000000000",
             "UID": "0x11f0adfbc15b1aecadfb025041000001",
@@ -202,7 +109,7 @@
             "VERSION": 2,
             "DESCRIPTION": "",
             "AI_AGENT": "0x11ef997726a6346a9977025041000001",
-            "ENABLED_FLAG": 1,
+            "ENABLED_FLAG": 0,
             "INSTRUCTIONS": [
                 "// Multiline text delimited by `\n`",
                 "You will help to modify and query a SQL database. will answer questions about the structure of the following database and will help write SQL. ",
@@ -226,7 +133,7 @@
         {
             "_EXPORT_SUMMARY": "SQL admin assistant v3.00",
             "CREATED_ON": "2026-05-07 13:39:40",
-            "MODIFIED_ON": "2026-05-13 23:30:30",
+            "MODIFIED_ON": "2026-06-26 08:00:26",
             "CREATED_BY_USER": "0x31000000000000000000000000000000",
             "MODIFIED_BY_USER": "0x31000000000000000000000000000000",
             "UID": "0x11f18af46f0330c68af4025041000001",
@@ -328,7 +235,7 @@
                         }
                     },
                     "workbench_intro": {
-                        "class": "\\axenox\\GenAI\\AI\\Concepts\\AppDocsConcept",
+                        "alias": "axenox.GenAI.AppDocsConcept",
                         "depth": 0,
                         "app_alias": "exface.Core",
                         "starting_page": "Getting_started/introduction.md"
