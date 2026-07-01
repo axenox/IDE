@@ -85,6 +85,7 @@ class IDEFacade extends AbstractHttpFacade
             "EXTENSIONS.CONFIG" => [
                 "codiware.markdown" => [
                     "INCLUDES.EDITOR_JS" => $baseUriPath . "vendor/exface/jeasyuifacade/Facades/js/toastui-editor-all.min.js",
+                    "INCLUDES.MERMAID_JS" => $baseUriPath . "vendor/exface/core/Facades/AbstractAjaxFacade/js/mermaid.min.js",
                     "INCLUDES.PREVIEW_CSS" => [
                         "npm-asset/github-markdown-css/github-markdown.css",
                         "exface/core/Facades/DocsFacade/template.css"
@@ -101,6 +102,10 @@ class IDEFacade extends AbstractHttpFacade
             }
             $appFolder = str_replace(AliasSelectorInterface::ALIAS_NAMESPACE_DELIMITER, '/', $appAlias);
             $config['ALLOWED_ROOTS'] = [$appFolder];
+            $config['CONSOLE.PRESETS'] = array_merge(
+                $this->buildCodiwareConsolePresets($appAlias),
+                (array) ($config['CONSOLE.PRESETS'] ?? [])
+            );
             $request = $request->withUri($request->getUri()->withPath(str_replace($appAlias, $appFolder, $request->getUri()->getPath())));
         }
         
@@ -130,6 +135,20 @@ class IDEFacade extends AbstractHttpFacade
         };
 
         return $middleware->process($request, $passThrough);
+    }
+
+    private function buildCodiwareConsolePresets(string $appAlias): array
+    {
+        return [
+            [
+                'label' => 'Export model',
+                'command' => '../../bin/action axenox.PackageManager:ExportAppModel ' . $appAlias,
+            ],
+            [
+                'label' => 'Repair app',
+                'command' => '../../bin/action axenox.PackageManager:InstallApp ' . $appAlias,
+            ],
+        ];
     }
 
     /**
