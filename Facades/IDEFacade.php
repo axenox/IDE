@@ -2,6 +2,7 @@
 namespace axenox\IDE\Facades;
 
 use axenox\IDE\Common\AdminerAPI;
+use exface\Core\DataTypes\FilePathDataType;
 use exface\Core\Exceptions\Facades\FacadeRoutingError;
 use exface\Core\Interfaces\Selectors\AliasSelectorInterface;
 use GuzzleHttp\Psr7\Uri;
@@ -101,6 +102,7 @@ class IDEFacade extends AbstractHttpFacade
                 throw new FacadeRoutingError('No app alias specified in URL - expected format: /api/ide/codiware/repo/{appAlias}/...');
             }
             $appFolder = str_replace(AliasSelectorInterface::ALIAS_NAMESPACE_DELIMITER, '/', $appAlias);
+            $appFolder = FilePathDataType::findPathCaseInsensitive($appFolder, $vendorFolder);
             $config['ALLOWED_ROOTS'] = [$appFolder];
             $config['CONSOLE.PRESETS'] = array_merge(
                 $this->buildCodiwareConsolePresets($appAlias),
