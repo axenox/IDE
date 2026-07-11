@@ -2,6 +2,7 @@
 	"FACADE.HEADERS.CONTENT_SECURITY_POLICY.DEFAULT_SRC": "'self' 'unsafe-eval' 'unsafe-inline'",
 	"FACADE.HEADERS.CONTENT_SECURITY_POLICY.CONNECT_SRC": "'self'",
 	"FACADE.HEADERS.CONTENT_SECURITY_POLICY.SCRIPT_SRC": "'self' 'unsafe-eval' 'unsafe-inline'",
+	"FACADE.HEADERS.CONTENT_SECURITY_POLICY.WORKER_SRC": "'self' 'unsafe-eval' 'unsafe-inline' blob:",
 	"FACADE.HEADERS.CONTENT_SECURITY_POLICY.SCRIPT_SRC_ELEM": "'self' 'unsafe-inline' blob:",
 	"FACADE.HEADERS.CONTENT_SECURITY_POLICY.FONT_SRC": "'self' 'unsafe-eval' 'unsafe-inline' blob: data:",
 	"FACADE.HEADERS.CONTENT_SECURITY_POLICY.IMG_SRC": "* 'self' 'unsafe-inline' blob: data: filesystem:",
@@ -17,5 +18,6 @@
 		"Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
 		"X-Content-Type-Options": "nosniff",
 		"X-XSS-Protection": "1; mode=block"
-	}
+	},
+	"FACADE.BUST_BROWSER_CACHE": false
 }

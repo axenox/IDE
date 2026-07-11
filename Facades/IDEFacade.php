@@ -2,6 +2,7 @@
 namespace axenox\IDE\Facades;
 
 use axenox\IDE\Common\AdminerAPI;
+use exface\Core\DataTypes\FilePathDataType;
 use exface\Core\Exceptions\Facades\FacadeRoutingError;
 use exface\Core\Interfaces\Selectors\AliasSelectorInterface;
 use GuzzleHttp\Psr7\Uri;
@@ -69,15 +70,28 @@ class IDEFacade extends AbstractHttpFacade
         $apiUriPath = $baseUriPath . $this->getUrlRouteDefault() . '/codiware';
         $vendorFolder = $this->getWorkbench()->filemanager()->getPathToVendorFolder();
 
+        if ($this->getConfig()->getOption('FACADE.BUST_BROWSER_CACHE') === true) {
+            $assetVersion = date('YmdHis');
+        } else {
+            $assetVersion = str_replace(['-', ' ', ':'], '', $this->getWorkbench()->getContext()->getScopeInstallation()->getVariable('last_metamodel_install') ?? '');
+        }
+
         $config = [
             'URL_BASE' => $baseUriPath,
             'URL_TO_API' => $this->getUrlRouteDefault() . '/codiware',
             'URL_TO_APP' => '/vendor/kabachello/codiware/public',
             'URL_TO_NPM' => '/vendor/npm-asset',
             'BASE_FOLDER' => $vendorFolder,
+            'CACHE_BUST' => $assetVersion,
             "EXTENSIONS.CONFIG" => [
                 "codiware.markdown" => [
-                    "INCLUDES.EDITOR_JS" => $baseUriPath . "vendor/exface/jeasyuifacade/Facades/js/toastui-editor-all.min.js"
+                    "INCLUDES.EDITOR_JS" => $baseUriPath . "vendor/exface/jeasyuifacade/Facades/js/toastui-editor-all.min.js",
+                    "INCLUDES.MERMAID_JS" => $baseUriPath . "vendor/exface/core/Facades/AbstractAjaxFacade/js/mermaid.min.js",
+                    "INCLUDES.PREVIEW_CSS" => [
+                        "npm-asset/github-markdown-css/github-markdown.css",
+                        "exface/core/Facades/DocsFacade/template.css"
+                    ],
+                    'CSS_CLASS_FOR_PREVIEW_CONTAINER' => 'markdown-body'
                 ]
             ]
         ];
@@ -88,7 +102,12 @@ class IDEFacade extends AbstractHttpFacade
                 throw new FacadeRoutingError('No app alias specified in URL - expected format: /api/ide/codiware/repo/{appAlias}/...');
             }
             $appFolder = str_replace(AliasSelectorInterface::ALIAS_NAMESPACE_DELIMITER, '/', $appAlias);
+            $appFolder = FilePathDataType::findPathCaseInsensitive($appFolder, $vendorFolder);
             $config['ALLOWED_ROOTS'] = [$appFolder];
+            $config['CONSOLE.PRESETS'] = array_merge(
+                $this->buildCodiwareConsolePresets($appAlias),
+                (array) ($config['CONSOLE.PRESETS'] ?? [])
+            );
             $request = $request->withUri($request->getUri()->withPath(str_replace($appAlias, $appFolder, $request->getUri()->getPath())));
         }
         
@@ -118,6 +137,20 @@ class IDEFacade extends AbstractHttpFacade
         };
 
         return $middleware->process($request, $passThrough);
+    }
+
+    private function buildCodiwareConsolePresets(string $appAlias): array
+    {
+        return [
+            [
+                'label' => 'Export model',
+                'command' => '../../bin/action axenox.PackageManager:ExportAppModel ' . $appAlias,
+            ],
+            [
+                'label' => 'Repair app',
+                'command' => '../../bin/action axenox.PackageManager:InstallApp ' . $appAlias,
+            ],
+        ];
     }
 
     /**
