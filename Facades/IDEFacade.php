@@ -16,7 +16,6 @@ use exface\Core\Facades\AbstractHttpFacade\AbstractHttpFacade;
 use GuzzleHttp\Psr7\HttpFactory;
 use GuzzleHttp\Psr7\Response;
 use exface\Core\DataTypes\StringDataType;
-use axenox\IDE\Common\AtheosAPI;
 use exface\Core\DataTypes\UrlDataType;
 
 /**
@@ -41,12 +40,7 @@ class IDEFacade extends AbstractHttpFacade
             // Autologin via function runAdminer
             case StringDataType::startsWith($pathInFacade, 'adminer/'):
             case StringDataType::startsWith($pathInFacade, 'externals/'):
-                $basePath = $this->getApp()->getDirectoryAbsolutePath() . DIRECTORY_SEPARATOR . 'Atheos';
                 $api = new AdminerAPI($this->getWorkbench(), $this->getUrlRouteDefault() . '/', $path, 'index.php', $this->buildHeadersCommon());
-                return $api->handle($request);
-            case StringDataType::startsWith($pathInFacade, 'atheos/'):
-                $basePath = $this->getApp()->getDirectoryAbsolutePath() . DIRECTORY_SEPARATOR . 'Atheos';
-                $api = new AtheosAPI($this->getWorkbench(), 'atheos/', $basePath, 'index.php', $this->buildHeadersCommon());
                 return $api->handle($request);
         }
         
