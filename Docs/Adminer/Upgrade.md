@@ -49,10 +49,11 @@ decision required.
 
 | Old change | Action | Notes |
 |------------|--------|-------|
-| `plugins/autocomplete.php` (custom SQL autocomplete) | **DROP** | 6.x ships built-in autocomplete (see upstream commits "Autocomplete: …") plus the `highlight-monaco` / `highlight-codemirror` editors, which are better. |
-| `plugins/disable-jush.php` | **DROP** | Only existed to stop JUSH from blocking the ACE autocomplete. No ACE anymore. |
-| `externals/ace/*` | **DROP** | Replaced by Monaco/CodeMirror highlight plugins. Search & replace comes with Monaco. |
-| `plugins/save-menu-pos.php` | **DROP/VERIFY** | Check whether menu position persistence is still wanted; not a stock plugin. Likely drop. |
+| `plugins/autocomplete.php` (custom SQL autocomplete) | **IMPLEMENTED** | Use the built-in jush editor (not Monaco). Adminer's stock 6.x editor is **jush**, which provides BOTH syntax highlighting and SQL autocomplete via `jush-autocomplete-sql.js`. The stock `highlight-monaco` plugin *replaces* jush entirely, but Monaco's bundled `sql`/`mysql`/`pgsql` languages have no completion provider – tested and verified. So DO NOT enable the Monaco plugin; let the core jush editor run unmodified. |
+| jush git submodule issue | **RESOLVED** | Adminer keeps jush as a git submodule (`adminer/static/jush`), which Composer does **not** populate (dist archives strip submodules, and even `--prefer-source` does not guarantee submodule init). Fresh installs have an empty `static/jush/` folder, causing 404s on `<link href='static/jush/jush.css'>` and breaking the editor. **Solution:** vendor jush files in `axenox/ide/Adminer6/assets/jush/` (CSS + all modules), and have `AdminerExfaceDesign` plugin own the loading via `head()` and `syntaxHighlighting()` overrides (point at `exface/jush/…` URLs served by the existing `exface/` prefix). Both overrides must `return true` to short-circuit the core hooks. This keeps the fork **byte-for-byte identical to upstream**, so future merges stay clean. |
+| `plugins/disable-jush.php` | **DROP** | Only existed to disable jush when ACE autocomplete was enabled. No longer relevant. |
+| `externals/ace/*` | **DROP** | ACE editor removed in 6.x. |
+| `plugins/save-menu-pos.php` | **DROP** | Menu position persistence not a priority; not a stock plugin. Drop. |
 
 ### 2.2 Integration / session / errors (marked `MOD exface`)
 
@@ -119,23 +120,24 @@ alongside it).
 | `tables-filter-mod.php` | **STOCK** | Use the stock `AdminerTablesFilter` (`plugins/tables-filter.php`). Drop our fork unless a specific extra behaviour is missing. |
 | `tree-viewer.php` + `tree-viewer/` | **PLUGIN** | No stock equivalent. Port to `class AdminerTreeViewer extends Adminer\Plugin`, adapt JS to 6.x markup. Evaluate whether `menu-links` covers the need first. |
 | `frames.php` usage | **STOCK** | Use stock `AdminerFrames`. |
-| `designs/exface/adminer.css` (ExFace theme) | **PLUGIN/STOCK** | Port the theme into the fork's `designs/` folder and load it via the stock `AdminerDesigns` plugin, or apply via a `css()` override. Reconcile CSS selectors with the new 6.x HTML/classes; the `/* MOD exface */` tweaks (tab styling, sticky SQL headers, table-list buttons) must be re-checked against the new DOM. |
+| `designs/exface/adminer.css` (ExFace theme) | **PLUGIN** | Keep the theme in `axenox/ide/Adminer6/assets/adminer.css` and load it via `AdminerExfaceDesign::css()` override (returns array with `exface/adminer.css` URL, served by AdminerAPI's `exface/` prefix). Reconcile CSS selectors with the new 6.x HTML/classes. The `/* MOD exface */` tweaks (tab styling, sticky SQL headers, duplicated logo fix, table-list button spacing) have been verified and fixed for 6.x pepa-linha theme baseline. |
 | MySQL SSL certificates | **STOCK/VERIFY** | Stock `AdminerLoginSsl` exists. Verify it accepts key/cert/ca paths the way `AdminerAPI::getAdminerAuth()` provides them. |
 
 ## 3. Integration layer changes (`axenox.IDE`, outside the fork)
 
 These are not edits to Adminer but are required to run the 6.x fork:
 
-1. **`Adminer/adminer.php` wrapper** – rebuild the plugin stack with 6.x class names:
-   - Keep: `AdminerLoginPasswordLess` (now `extends Adminer\Password`), `AdminerTablesFilter`,
-     `AdminerFrames`, `AdminerLoginSsl`, `AdminerDatabaseHide`.
-   - Add: `AdminerHighlightMonaco` (or `AdminerHighlightCodeMirror`) for the SQL editor.
-   - Drop: `AdminerAutocomplete`, `AdminerDisableJush`, `AdminerSaveMenuPos`.
-   - Port: `AdminerTreeViewer`, ExFace design (via `AdminerDesigns` or `css()`), and the
-     Mermaid ER-diagram plugin.
-   - Note the plugin bootstrap changed: 6.x uses namespaced `Adminer\Plugin` and the
-     `adminer-plugins.php` / `Plugins` mechanism – verify the `plugin.php` include path.
+1. **`Adminer6/adminer.php` wrapper** – bootstrap the plugin stack with 6.x class names:
+   - Keep: `AdminerLoginPasswordLess`, `AdminerTablesFilter`, `AdminerFrames`, `AdminerLoginSsl`.
+   - Drop: `AdminerHighlightMonaco` (Monaco has no SQL autocomplete; use the built-in jush editor instead).
+   - Keep: `AdminerExfaceDesign` (now owns both the ExFace theme CSS and jush editor loading via
+     `head()` and `syntaxHighlighting()` overrides to serve vendored jush from `Adminer6/assets/jush/`).
+   - Port: `AdminerTreeViewer`, Mermaid ER-diagram plugin.
+   - Note: the plugin bootstrap uses namespaced `Adminer\Plugin` and the `Plugins` manager.
 2. **`Common/AdminerAPI.php`**:
+   - Jush asset serving: no special routing needed. `AdminerExfaceDesign` loads jush from our
+     vendored copy under the existing `exface/` prefix (served by the `startsWith('exface/')`
+     case in `runAdminer()`). The fork's empty `static/jush/` folder is never accessed.
    - `getAdminerDriver()` mapping – the MS SQL driver key is now **`mssql`** (drop the
      `mssql_mod` custom driver).
    - Re-verify the `$_POST['auth']` array shape against 6.x `auth.inc.php`.
@@ -151,23 +153,18 @@ These are not edits to Adminer but are required to run the 6.x fork:
 
 ## 4. Suggested execution order
 
-1. **Add the dependency**: pull `axenox/adminer` into the installation via Composer; get a
-   bare, unmodified 6.x running behind the IDE facade (update `AdminerAPI` paths + driver
-   mapping + auth array). Confirm login and basic browsing work for MySQL and MS SQL.
-2. **Wire the stock plugins** in `adminer.php` (tables-filter, frames, login-ssl,
-   login-password-less, database-hide, highlight-monaco). Remove the obsolete ones.
-3. **Re-apply the two `MOD exface` neutralizations** (session/errors) as marked core patches;
-   verify sessions survive.
-4. **Port the ExFace theme** into `designs/` and load it; fix CSS against the new DOM.
-5. **Port `AdminerTreeViewer`** to the new plugin base class.
-6. **Re-verify every MS SQL item** in §2.3 one by one; only port what is still broken, using
-   a driver subclass (never `global $workbench` in core).
-8. **Port the Mermaid ER diagram** (§2.5) as a plugin with its own route, nav entry and
-   bundled `mermaid`/`svg-pan-zoom` assets.
-9. **Re-apply copy-without-data** (§2.4) across the mysql/pgsql/mssql drivers, guarded by a
-   "copy data" checkbox (default off).
-10. **Decide** on the `IDENTITY()` business rule; implement via a driver subclass if needed.
-11. Remove the vendored `Adminer/` folder from `axenox.IDE`.
+| Step | Action | Adminer 6.0.1 | Adminneo 5.6.0 |
+|------|--------|---------------|----------------|
+| 1 | **Add the dependency**: pull the fork into the installation via Composer; get a bare, unmodified build running behind the IDE facade (update `AdminerAPI` paths + driver mapping + auth array). Confirm login and basic browsing work for MySQL and MS SQL. | Done | |
+| 2 | **Wire the stock plugins** in `adminer.php` (tables-filter, frames, login-ssl, login-password-less, database-hide). DO NOT enable `highlight-monaco` — use the built-in jush editor for full SQL highlighting + autocomplete. Ensure `AdminerExfaceDesign` loads the vendored jush assets from `Adminer6/assets/jush/` via `head()` and `syntaxHighlighting()` overrides. | Done. But jush files had to be included in axenox/ide package. | |
+| 3 | **Re-apply the two `MOD exface` neutralizations** (session/errors) as marked core patches; verify sessions survive. | Done | |
+| 4 | **Port the ExFace theme** into `designs/` and load it; fix CSS against the new DOM. | Done. But the theme has lots of smaller issues. A lot of our 4.x improvements probably need to be hacked into v6 if we want them. | |
+| 5 | **Re-verify every MS SQL item** in §2.3 one by one; only port what is still broken, using a driver subclass (never `global $workbench` in core). | | |
+| 6 | **Re-apply copy-without-data** (§2.4) across the mysql/pgsql/mssql drivers, guarded by a "copy data" checkbox (default off). | | |
+| 7 | **Decide** on the `IDENTITY()` business rule; implement via a driver subclass if needed. | | |
+| 8 | Remove the vendored `Adminer/` folder from `axenox.IDE`. | | |
+| 9 | **Port `AdminerTreeViewer`** to the new plugin base class. | | |
+| 10 | **Port the Mermaid ER diagram** (§2.5) as a plugin with its own route, nav entry and bundled `mermaid`/`svg-pan-zoom` assets. | | |
 
 ## 5. Test checklist (per connection type: MySQL/MariaDB, MS SQL, PostgreSQL)
 
