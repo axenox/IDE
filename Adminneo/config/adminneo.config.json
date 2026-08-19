@@ -5,6 +5,7 @@
 	"jsonValuesDetection": true,
 	"jsonValuesAutoFormat": true,
 	"recordsPerPage": 30,
+	"outputFlushing": false,
 	"hiddenDatabases": ["__system"],
 	"hiddenSchemas": ["__system"]
 }
