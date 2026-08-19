@@ -10,6 +10,8 @@ use axenox\GenAI\Interfaces\AiToolInterface;
 use axenox\GenAI\Interfaces\AiToolResultInterface;
 use axenox\IDE\AI\Agents\SqlAdminAssistant;
 use axenox\IDE\Common\AdminerAPI;
+use axenox\IDE\Common\AdminneoAPI;
+use axenox\IDE\Common\SqlAdminApiInterface;
 use axenox\IDE\Facades\IDEFacade;
 use exface\Core\CommonLogic\Actions\ServiceParameter;
 use exface\Core\DataTypes\MarkdownDataType;
@@ -54,10 +56,30 @@ class CallSqlTool extends AbstractAiTool
     
     protected function callSQL(string $sql, SqlDataConnectorInterface $connection): string
     {
-        $ideFacade = FacadeFactory::createFromString(IDEFacade::class, $this->getWorkbench());
-        $adminerAPI = new AdminerAPI($this->getWorkbench(), $ideFacade->getUrlRouteDefault() . '/', 'adminer/', 'index.php', []);
-        $array = $adminerAPI->runSql($connection, $sql);
+        $array = $this->getSqlAdminApi()->runSql($connection, $sql);
         return MarkdownDataType::buildMarkdownTableFromArray($array);
+    }
+
+    /**
+     * Instantiates the configured SQL admin API (Adminer or AdminNeo).
+     *
+     * The engine is selected via the `SQL_ADMIN.ENGINE` option of the axenox.IDE app, so the AI
+     * tools follow the same switch as the facade.
+     *
+     * @return SqlAdminApiInterface
+     */
+    protected function getSqlAdminApi() : SqlAdminApiInterface
+    {
+        /** @var \axenox\IDE\Facades\IDEFacade $ideFacade */
+        $ideFacade = FacadeFactory::createFromString(IDEFacade::class, $this->getWorkbench());
+        $baseUrl = $ideFacade->getUrlRouteDefault() . '/';
+        $engine = mb_strtolower((string) $this->getWorkbench()->getApp('axenox.IDE')->getConfig()->getOption('SQL_ADMIN.ENGINE'));
+        switch ($engine) {
+            case 'adminneo':
+                return new AdminneoAPI($this->getWorkbench(), $baseUrl, 'adminneo/', 'index.php', []);
+            default:
+                return new AdminerAPI($this->getWorkbench(), $baseUrl, 'adminer/', 'index.php', []);
+        }
     }
 
     /**
