@@ -351,6 +351,13 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
             }
         }
 
+        // Embedded rendering captures AdminNeo's output, so mid-render flushing must be disabled by
+        // default: a bare flush() would commit the HTTP headers early and break the facade's PSR-7
+        // response (see launchAdminneo()). Overridable via "outputFlushing" in adminneo.config.json.
+        if (! array_key_exists('outputFlushing', $config)) {
+            $config['outputFlushing'] = false;
+        }
+
         return $config;
     }
 
@@ -424,15 +431,25 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
      */
     protected function launchAdminneo(bool $capture = true) : ?string
     {
-        $this->startIsolatedSession();
+        // Asset requests (capture=false) are served by file.inc.php, which streams the cached
+        // file and exit()s before AdminNeo ever starts its own session. Opening our isolated
+        // session here would leave a foreign session active when the workbench saves its context
+        // scopes on shutdown: SessionContextScope::sessionOpen() then calls session_start() on the
+        // still-active session and PHP appends a "session already active" notice to the streamed
+        // JS/CSS, breaking it. The asset route needs no session at all, so skip it while streaming.
+        if ($capture) {
+            $this->startIsolatedSession();
+        }
         $cwd = getcwd();
         chdir($this->getForkAdminPath());
         if ($capture) {
-            // AdminNeo streams its output: slow_query() and the query kill-timeout script call
-            // ob_flush()/flush() mid-render. Capturing through a callback buffer that returns an
-            // empty string swallows those flushes, so nothing reaches the SAPI early (which would
-            // otherwise send headers and trigger "headers already sent" once the facade emits its
-            // PSR-7 response). We accumulate everything and return it in one piece.
+            // AdminNeo streams its output: slow_query() and the running-query feedback on the SQL
+            // page call ob_flush()/flush() mid-render. The callback buffer below returns an empty
+            // string to swallow the *content* of those flushes, but the bare flush() still forces
+            // mod_php to commit the HTTP headers immediately - which then breaks the facade's own
+            // PSR-7 response with "headers already sent". The "outputFlushing" config option (see
+            // buildAdminneoConfig() and \AdminNeo\flush_output()) tells the fork to skip these
+            // mid-render flushes while we capture, so the whole page is emitted in one piece.
             $captured = '';
             $collector = function (string $chunk) use (&$captured) : string {
                 $captured .= $chunk;
