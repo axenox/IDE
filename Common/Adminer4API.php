@@ -14,18 +14,15 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * Integration for the axenox/adminer 6.x fork.
+ * Legacy integration for the bundled Adminer 4.8.2 sources (folder `Adminer/`).
  *
- * Serves the fork's static files, boots it with the ExFace plugin stack (see
- * `Adminer6/adminer.php`) and exposes helpers like {@see self::exportDDL()} and
- * {@see self::runSql()} for programmatic access.
- *
- * To fall back to the bundled Adminer 4.8.2 sources, instantiate {@see Adminer4API} instead
- * of this class in {@see \axenox\IDE\Facades\IDEFacade}.
+ * This class is kept as a fallback for the migration to the axenox/adminer 6.x fork.
+ * To switch back to Adminer 4, instantiate this class instead of {@see AdminerAPI} in
+ * {@see \axenox\IDE\Facades\IDEFacade}.
  *
  * @author andrej.kabachnik
  */
-class AdminerAPI extends InclusionAPI
+class Adminer4API extends InclusionAPI
 {
     const NO_PASSWROD = '12345678';
 
@@ -59,7 +56,7 @@ class AdminerAPI extends InclusionAPI
             case stripos($connectorClass, 'postgresql') !== false:
                 $password = $connectionConfig['password'];
                 if ($password === '' || $password === null) {
-                    $password = AdminerAPI::NO_PASSWROD;
+                    $password = Adminer4API::NO_PASSWROD;
                 }
                 $auth = [
                     'server' => $connectionConfig['host'] . ($connectionConfig['port'] ? ':' . $connectionConfig['port'] : ''),
@@ -83,7 +80,7 @@ class AdminerAPI extends InclusionAPI
             case stripos($connectorClass, 'mssql') !== false:
                 $password = $connectionConfig['PWD'] ?? $connectionConfig['password'];
                 if ($password === '' || $password === null) {
-                    $password = AdminerAPI::NO_PASSWROD;
+                    $password = Adminer4API::NO_PASSWROD;
                 }
                 $auth = [
                     'server' => ($connectionConfig['serverName'] ?? $connectionConfig['host']) . ($connectionConfig['port'] ? ':' . $connectionConfig['port'] : ''),
@@ -92,17 +89,8 @@ class AdminerAPI extends InclusionAPI
                     'driver' => $this->getAdminerDriver($connectorClass),
                     'db'    => $connectionConfig['database'] ?? $connectionConfig['dbase']
                 ];
-                // Advanced connection options (e.g. TrustServerCertificate, Encrypt) are passed
-                // to the MS SQL driver via connectSsl() - the AdminerLoginSsl plugin exposes the
-                // `ssl` array there. The old integration appended ;Options={...} to the server
-                // name, which the 6.x driver would treat as part of the host.
-                if (null !== $options = $connectionConfig['connection_options'] ?? null) {
-                    if (is_string($options)) {
-                        $options = json_decode($options, true) ?: [];
-                    }
-                    foreach ((array) $options as $optKey => $optVal) {
-                        $auth['ssl'][$optKey] = $optVal;
-                    }
+                if (array_key_exists('connection_options', $connectionConfig)) {
+                    $auth['server'] .= ';Options=' . json_encode($connectionConfig['connection_options']);
                 }
         }
         return $auth;
@@ -172,30 +160,37 @@ class AdminerAPI extends InclusionAPI
      */
     protected function runAdminer(string $pathInFacade) : ResponseInterface
     {
+        if (StringDataType::startsWith($pathInFacade, 'externals/')) {
+            $pathInFacade = 'adminer/' . $pathInFacade;
+        }
         $target = StringDataType::substringAfter($pathInFacade, 'adminer/');
         $selector = rtrim($target, '/');
-
-        $forkDir = $this->getForkAdminerPath();
-        $customDir = $this->getCustomAssetsPath();
-
+        $base = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'Adminer' . DIRECTORY_SEPARATOR;
+        $baseSrc = $base . 'src' . DIRECTORY_SEPARATOR;
+        $baseSrcAdminer = $base . 'adminer' . DIRECTORY_SEPARATOR;
         switch (true) {
-            // Custom ExFace assets (theme CSS, vendored jush editor, ...) are served under the
-            // "exface/" prefix. The jush editor lives in Adminer6/assets/jush/ because Adminer
-            // keeps it as a git submodule that Composer does not populate; AdminerExfaceDesign
-            // loads it from here via head()/syntaxHighlighting() overrides.
-            case StringDataType::startsWith($selector, 'exface/'):
-                $file = $customDir . StringDataType::substringAfter($selector, 'exface/');
-                if (file_exists($file) && ! is_dir($file)) {
-                    return $this->serveFile($file);
+            case file_exists($baseSrc . $selector):
+            case file_exists($baseSrcAdminer . $selector):
+                $file = $selector;
+                $stream = fopen($baseSrcAdminer.$file, 'r');
+                switch (FilePathDataType::findExtension($file)) {
+                    // read css-file
+                    case 'css':
+                        $mimeType = 'text/css';
+                        break;
+                    // read different file
+                    case 'js':
+                        $mimeType = 'text/javascript';
+                        break;
+                    // read different file
+                    Default:
+                        $mimeType = mime_content_type($base.$file);
+                        break;
                 }
-                return new Response(404, $this->getHeadersCommon(), 'Not found: ' . $selector);
-
-            // Static files shipped with the Adminer fork (static/..., etc.)
-            case $selector !== '' && ! is_dir($forkDir . $selector) && file_exists($forkDir . $selector):
-                return $this->serveFile($forkDir . $selector);
-
-            // Otherwise render an Adminer page for the given connection
-            default:
+                $headers = $this->getHeadersCommon();
+                $headers['Content-Type'] = $mimeType;
+                return new Response(200, $headers, $stream);
+            case ! file_exists($base . $selector):
                 switch (true) {
                     case isset($_POST['logout']):
                         $_GET = [];
@@ -243,66 +238,30 @@ class AdminerAPI extends InclusionAPI
                 $headers = headers_list();
                 $headers = array_merge($headers, $this->getHeadersCommon());
                 return new Response(200, $headers, $html);
-        }
-    }
 
-    /**
-     * Streams a file from disk with a suitable Content-Type header.
-     *
-     * @param string $absPath
-     * @return ResponseInterface
-     */
-    protected function serveFile(string $absPath) : ResponseInterface
-    {
-        $stream = fopen($absPath, 'r');
-        switch (FilePathDataType::findExtension($absPath)) {
-            case 'css':
-                $mimeType = 'text/css';
-                break;
-            case 'js':
-                $mimeType = 'text/javascript';
-                break;
+
+            // read different files    
             default:
-                $mimeType = mime_content_type($absPath);
-                break;
+                $file = $selector;
+                $stream = fopen($base.$file, 'r');
+                switch (FilePathDataType::findExtension($file)) {
+                    // read css-file
+                    case 'css':
+                        $mimeType = 'text/css';
+                        break;
+                    // read different file
+                    case 'js':
+                        $mimeType = 'text/javascript';
+                        break;
+                    // read different file
+                    Default:
+                        $mimeType = mime_content_type($base.$file);
+                        break;
+                }
+                $headers = $this->getHeadersCommon();
+                $headers['Content-Type'] = $mimeType;
+                return new Response(200, $headers, $stream);
         }
-        $headers = $this->getHeadersCommon();
-        $headers['Content-Type'] = $mimeType;
-        return new Response(200, $headers, $stream);
-    }
-
-    /**
-     * Absolute path to the `adminer/` folder of the axenox/adminer 6.x fork.
-     *
-     * @return string
-     */
-    protected function getForkAdminerPath() : string
-    {
-        return $this->getWorkbench()->filemanager()->getPathToVendorFolder()
-            . DIRECTORY_SEPARATOR . 'axenox'
-            . DIRECTORY_SEPARATOR . 'adminer'
-            . DIRECTORY_SEPARATOR . 'adminer'
-            . DIRECTORY_SEPARATOR;
-    }
-
-    /**
-     * Absolute path to the folder with ExFace-specific Adminer assets (theme CSS, JS).
-     *
-     * @return string
-     */
-    protected function getCustomAssetsPath() : string
-    {
-        return __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'Adminer6' . DIRECTORY_SEPARATOR . 'assets' . DIRECTORY_SEPARATOR;
-    }
-
-    /**
-     * Absolute path to the wrapper that boots the fork with the ExFace plugin stack.
-     *
-     * @return string
-     */
-    protected function getWrapperPath() : string
-    {
-        return __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'Adminer6' . DIRECTORY_SEPARATOR . 'adminer.php';
     }
 
     /**
@@ -311,47 +270,17 @@ class AdminerAPI extends InclusionAPI
      */
     protected function launchAdminer() : ?string
     {
+        global $adminer;
+        $workbench = $this->getWorkbench();
         ob_start();
         session_start();
-        $this->injectLoginCsrfToken();
         $cwd = getcwd();
-        chdir($this->getForkAdminerPath());
-        require $this->getWrapperPath();
+        chdir(__DIR__ . '/../Adminer/');
+        require 'adminer.php';
         $output = ob_get_contents();
         ob_end_clean();
         chdir($cwd);
         return $output;
-    }
-
-    /**
-     * Provides a valid CSRF token for the login that the API injects server-side.
-     *
-     * Adminer 6.x gates the login (`$_POST['auth']`) with `verify_token()`, which compares a
-     * token from the request body (`$_POST['token']`) against `$_SESSION['token']` and requires
-     * a same-origin request. Since Adminer shares the session with the workbench, we can set
-     * both values ourselves and thus keep Adminer's CSRF protection intact instead of disabling
-     * it in the core.
-     *
-     * @return void
-     */
-    protected function injectLoginCsrfToken() : void
-    {
-        // Only relevant when we perform a server-side auto-login
-        if (! isset($_POST['auth'])) {
-            return;
-        }
-        if (empty($_SESSION['token'])) {
-            $_SESSION['token'] = rand(1, 1e6);
-        }
-        // Mirror Adminer\get_token(): token = (rand XOR session token) . ":" . rand
-        $rand = rand(1, 1e6);
-        $_POST['token'] = (($rand ^ $_SESSION['token']) . ':' . $rand);
-        // verify_token() also requires a same-origin request. The login is issued by the
-        // workbench itself, so present it as same-origin if the header would fail the check.
-        $secFetchSite = $_SERVER['HTTP_SEC_FETCH_SITE'] ?? '';
-        if (! in_array($secFetchSite, ['', 'same-origin'], true)) {
-            $_SERVER['HTTP_SEC_FETCH_SITE'] = 'same-origin';
-        }
     }
 
     /**
@@ -367,18 +296,19 @@ class AdminerAPI extends InclusionAPI
      */
     public function exportDDL(SqlDataConnectorInterface $connection, string $tableOrViewName, ?string $schema = null, ?string $style = 'CREATE') : string
     {
+        global $adminer;
         $facadePath = $this->getApiUrlPath($connection, null, $schema);
-        if (\Adminer\connection() === null) {
+        if($adminer == null){
             $this->runAdminer($facadePath);
         }
 
-        $driver = \Adminer\driver();
-        $tableStatus = $driver->table_status($tableOrViewName);
-        if ($driver->is_view($tableStatus)) {
-            $viewStatus = $driver->view($tableOrViewName);
+
+        $tableStatus = table_status($tableOrViewName);
+        if (is_view($tableStatus)) {
+            $viewStatus = view($tableStatus);
             $dump = "CREATE VIEW $tableOrViewName AS \n" . $viewStatus["select"];
         } else {
-            $dump = $driver->create_sql($tableOrViewName, false, $style);
+            $dump = create_sql($tableOrViewName, false, $style);
             if (empty($dump)) {
                 $dump = '-- ERROR: table "' . $tableOrViewName . '" not found in schema/tablespace "' . $schema . '"';
             }
@@ -388,13 +318,25 @@ class AdminerAPI extends InclusionAPI
 
     public function runSql(SqlDataConnectorInterface $connector, string $sql) : array
     {
+        global $adminer;
+        global $connection;
         $facadePath = $this->getApiUrlPath($connector);
-        if (\Adminer\connection() === null) {
+        if($connection == null) {
             // TODO only run adminer if it was not run yet during the current HTTP request.
             $this->runAdminer($facadePath);
         }
 
-        return \Adminer\get_rows($sql);
+
+        $tableArray = get_rows($sql);
+
+        return $tableArray;
+
+        // TODO only allow SELECT queries - no DELETE, DROP, UPDATE, etc.
+        $_POST[] = [];
+        $_POST["token"] = $this->getApiToken();
+        $connection->multi_query($sql);
+        $result = $connection->store_result();
+        // TODO transform result to array
     }
 
     protected function getApiUrlPath(SqlDataConnectorInterface $connection, ?string $function = null, ?string $schema = null) : string
