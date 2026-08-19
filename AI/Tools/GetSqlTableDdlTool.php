@@ -42,9 +42,7 @@ class GetSqlTableDdlTool extends CallSqlTool
      */
     protected function getDDL(SqlDataConnectorInterface $connection, string $tableName, ?string $schema = null): string
     {
-        $ideFacade = FacadeFactory::createFromString(IDEFacade::class, $this->getWorkbench());
-        $adminerAPI = new AdminerAPI($this->getWorkbench(), $ideFacade->getUrlRouteDefault() . '/', 'adminer/', 'index.php', []);
-        return $adminerAPI->exportDDL($connection, $tableName, $schema);
+        return $this->getSqlAdminApi()->exportDDL($connection, $tableName, $schema);
     }
 
     /**

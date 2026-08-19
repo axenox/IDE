@@ -25,7 +25,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * @author andrej.kabachnik
  */
-class AdminerAPI extends InclusionAPI
+class AdminerAPI extends InclusionAPI implements SqlAdminApiInterface
 {
     const NO_PASSWROD = '12345678';
 

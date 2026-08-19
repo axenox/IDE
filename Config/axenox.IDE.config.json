@@ -19,5 +19,6 @@
 		"X-Content-Type-Options": "nosniff",
 		"X-XSS-Protection": "1; mode=block"
 	},
-	"FACADE.BUST_BROWSER_CACHE": false
+	"FACADE.BUST_BROWSER_CACHE": false,
+	"SQL_ADMIN.ENGINE": "adminer"
 }
