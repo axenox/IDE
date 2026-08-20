@@ -1,18 +1,13 @@
 <?php
 namespace axenox\IDE\AI\Tools;
 
-use axenox\GenAI\Common\AbstractAiTool;
 use axenox\GenAI\Common\AiToolResultString;
 use axenox\GenAI\Interfaces\AiAgentInterface;
 use axenox\GenAI\Interfaces\AiPromptInterface;
-use axenox\GenAI\Interfaces\AiToolInterface;
 use axenox\GenAI\Interfaces\AiToolResultInterface;
-use axenox\IDE\Common\AdminerAPI;
-use axenox\IDE\Facades\IDEFacade;
 use exface\Core\CommonLogic\Actions\ServiceParameter;
 use exface\Core\DataTypes\SqlDataType;
 use exface\Core\Factories\DataTypeFactory;
-use exface\Core\Factories\FacadeFactory;
 use exface\Core\Interfaces\DataSources\SqlDataConnectorInterface;
 use exface\Core\Interfaces\DataTypes\DataTypeInterface;
 use exface\Core\Interfaces\WorkbenchInterface;

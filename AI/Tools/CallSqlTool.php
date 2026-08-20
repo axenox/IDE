@@ -6,10 +6,9 @@ use axenox\GenAI\Common\AiToolResultString;
 use axenox\GenAI\Exceptions\AiToolRuntimeError;
 use axenox\GenAI\Interfaces\AiAgentInterface;
 use axenox\GenAI\Interfaces\AiPromptInterface;
-use axenox\GenAI\Interfaces\AiToolInterface;
 use axenox\GenAI\Interfaces\AiToolResultInterface;
 use axenox\IDE\AI\Agents\SqlAdminAssistant;
-use axenox\IDE\Common\AdminerAPI;
+use axenox\IDE\Common\Adminer4API;
 use axenox\IDE\Common\AdminneoAPI;
 use axenox\IDE\Common\SqlAdminApiInterface;
 use axenox\IDE\Facades\IDEFacade;
@@ -78,7 +77,7 @@ class CallSqlTool extends AbstractAiTool
             case 'adminneo':
                 return new AdminneoAPI($this->getWorkbench(), $baseUrl, 'adminneo/', 'index.php', []);
             default:
-                return new AdminerAPI($this->getWorkbench(), $baseUrl, 'adminer/', 'index.php', []);
+                return new Adminer4API($this->getWorkbench(), $baseUrl, 'adminer/', 'index.php', []);
         }
     }
 

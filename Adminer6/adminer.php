@@ -2,7 +2,7 @@
 /**
  * Bootstrap wrapper for the axenox/adminer 6.x fork within the ExFace IDE.
  *
- * This file is required by {@see \axenox\IDE\Common\AdminerAPI::launchAdminer()} after the
+ * This file is required by {@see \axenox\IDE\Common\Adminer6API::launchAdminer()} after the
  * current working directory has been changed to the fork's `adminer/` folder. It defines the
  * global `adminer_object()` factory expected by Adminer's `bootstrap.inc.php`, assembles the
  * plugin stack (stock plugins shipped with the fork + our own ExFace plugins) and then runs
@@ -12,7 +12,7 @@
  * The Adminer core classes are namespaced under `Adminer\`.
  */
 
-use axenox\IDE\Common\AdminerAPI;
+use axenox\IDE\Common\Adminer6API;
 
 if (! function_exists('adminer_object')) {
     /**
@@ -40,7 +40,7 @@ if (! function_exists('adminer_object')) {
         // submodule that Composer does not populate, so AdminerAPI serves a vendored copy
         // under `static/jush/` (see AdminerAPI::runAdminer()).
         $plugins = [
-            new \AdminerLoginPasswordLess(password_hash(AdminerAPI::NO_PASSWROD, PASSWORD_DEFAULT)),
+            new \AdminerLoginPasswordLess(password_hash(Adminer6API::NO_PASSWROD, PASSWORD_DEFAULT)),
             new \AdminerTablesFilter(),
             new \AdminerExfaceDesign(),
             new \AdminerFrames(true),

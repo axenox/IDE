@@ -17,7 +17,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * Legacy integration for the bundled Adminer 4.8.2 sources (folder `Adminer/`).
  *
  * This class is kept as a fallback for the migration to the axenox/adminer 6.x fork.
- * To switch back to Adminer 4, instantiate this class instead of {@see AdminerAPI} in
+ * To switch back to Adminer 4, instantiate this class instead of {@see Adminer6API} in
  * {@see \axenox\IDE\Facades\IDEFacade}.
  *
  * @author andrej.kabachnik

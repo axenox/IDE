@@ -15,7 +15,7 @@ use Psr\Http\Server\RequestHandlerInterface;
  * Current implementations:
  *
  * - {@see AdminneoAPI} - the axenox/adminneo fork (cleaner default theme, config-file driven).
- * - {@see AdminerAPI} - the axenox/adminer 6.x fork.
+ * - {@see Adminer6API} - the axenox/adminer 6.x fork.
  * - {@see Adminer4API} - the legacy bundled Adminer 4.8.2 sources.
  *
  * @author andrej.kabachnik

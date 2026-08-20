@@ -7,7 +7,7 @@
  * stays untouched:
  *
  * 1. Injects the ExFace stylesheet via {@see css()}. It is served by
- *    {@see \axenox\IDE\Common\AdminerAPI} from `Adminer6/assets/adminer.css` under the
+ *    {@see \axenox\IDE\Common\Adminer6API} from `Adminer6/assets/adminer.css` under the
  *    `exface/` URL prefix, on top of Adminer's built-in `static/default.css`.
  * 2. Loads Adminer's built-in jush editor (SQL syntax highlighting AND autocomplete) from a
  *    copy vendored in `Adminer6/assets/jush/`. Adminer keeps jush as a git submodule, which

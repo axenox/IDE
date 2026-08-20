@@ -3,7 +3,6 @@
     "require": {
         "exface/core": "^1.0",
         "kabachello/codiware": "~0.1||^1.0",
-        "axenox/adminer": "*",
         "axenox/adminneo": "*",
         "npm-asset/svg-pan-zoom": "^3"
     },
