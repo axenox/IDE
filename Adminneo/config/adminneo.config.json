@@ -6,6 +6,7 @@
 	"jsonValuesAutoFormat": true,
 	"recordsPerPage": 30,
 	"outputFlushing": false,
+	"frameAncestors": ["self"],
 	"hiddenDatabases": ["__system"],
 	"hiddenSchemas": ["__system"]
 }
