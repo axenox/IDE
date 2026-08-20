@@ -25,7 +25,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * @author andrej.kabachnik
  */
-class AdminerAPI extends InclusionAPI implements SqlAdminApiInterface
+class Adminer6API extends InclusionAPI implements SqlAdminApiInterface
 {
     const NO_PASSWROD = '12345678';
 
@@ -59,7 +59,7 @@ class AdminerAPI extends InclusionAPI implements SqlAdminApiInterface
             case stripos($connectorClass, 'postgresql') !== false:
                 $password = $connectionConfig['password'];
                 if ($password === '' || $password === null) {
-                    $password = AdminerAPI::NO_PASSWROD;
+                    $password = Adminer6API::NO_PASSWROD;
                 }
                 $auth = [
                     'server' => $connectionConfig['host'] . ($connectionConfig['port'] ? ':' . $connectionConfig['port'] : ''),
@@ -83,7 +83,7 @@ class AdminerAPI extends InclusionAPI implements SqlAdminApiInterface
             case stripos($connectorClass, 'mssql') !== false:
                 $password = $connectionConfig['PWD'] ?? $connectionConfig['password'];
                 if ($password === '' || $password === null) {
-                    $password = AdminerAPI::NO_PASSWROD;
+                    $password = Adminer6API::NO_PASSWROD;
                 }
                 $auth = [
                     'server' => ($connectionConfig['serverName'] ?? $connectionConfig['host']) . ($connectionConfig['port'] ? ':' . $connectionConfig['port'] : ''),
