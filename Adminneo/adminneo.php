@@ -32,10 +32,25 @@ if (! function_exists('adminneo_instance')) {
         $context = $GLOBALS['axenox_ide_adminneo'] ?? [];
         $config = $context['config'] ?? [];
 
-        // No custom plugins are enabled by default: AdminNeo ships SQL highlighting and
-        // autocomplete (jush is vendored, no submodule), plus a clean default theme. Add stock or
-        // ExFace plugins here if needed - the Plugins manager chains them automatically.
+        // Add stock or ExFace plugins here if needed - the Plugins manager chains them
+        // automatically. AdminNeo itself ships SQL highlighting and autocomplete (jush is
+        // vendored, no submodule) plus a clean default theme, so none of that needs a plugin.
         $plugins = [];
+
+        // Allow embedding the SQL admin in an IFrame. By default AdminNeo sends
+        // "X-Frame-Options: DENY" (see \AdminNeo\page_headers()), which blocks the IDE from
+        // showing the tool in an iframe - our primary way of using it. The stock
+        // FrameSupportPlugin relaxes this to the configured frame ancestors and adds a matching
+        // CSP "frame-ancestors" directive. Ancestors default to same-origin ("self") and can be
+        // overridden via the "frameAncestors" key in Adminneo/config/adminneo.config.json. An
+        // empty list disables the plugin (keeping the DENY default). The plugin classes are not
+        // Composer-autoloaded, so require the file explicitly; getcwd() is the fork's admin/
+        // folder, with plugins/ a sibling of it.
+        $frameAncestors = $config['frameAncestors'] ?? ['self'];
+        if (! empty($frameAncestors)) {
+            require_once dirname(getcwd()) . DIRECTORY_SEPARATOR . 'plugins' . DIRECTORY_SEPARATOR . 'FrameSupportPlugin.php';
+            $plugins[] = new \AdminNeo\FrameSupportPlugin($frameAncestors);
+        }
 
         return \AdminNeo\ExfaceAdmin::create($config, $plugins);
     }
