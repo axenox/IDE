@@ -1,7 +1,7 @@
 <?php
 namespace axenox\IDE\Facades;
 
-use axenox\IDE\Common\AdminerAPI;
+use axenox\IDE\Common\Adminer4API;
 use axenox\IDE\Common\AdminneoAPI;
 use exface\Core\DataTypes\FilePathDataType;
 use exface\Core\Exceptions\Facades\FacadeRoutingError;
@@ -47,7 +47,7 @@ class IDEFacade extends AbstractHttpFacade
             // Adminer with autologin
             case StringDataType::startsWith($pathInFacade, 'adminer/'):
             case StringDataType::startsWith($pathInFacade, 'externals/'):
-                $api = new AdminerAPI($this->getWorkbench(), $this->getUrlRouteDefault() . '/', $path, 'index.php', $this->buildHeadersCommon());
+                $api = new Adminer4API($this->getWorkbench(), $this->getUrlRouteDefault() . '/', $path, 'index.php', $this->buildHeadersCommon());
                 return $api->handle($request);
         }
         

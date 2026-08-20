@@ -28,7 +28,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * - Driver options (incl. the MS SQL TrustServerCertificate/Encrypt flags) are first-class config
  *   keys, so connection specifics are expressed as configuration rather than as core hacks.
  *
- * To use a different SQL admin front-end, instantiate {@see AdminerAPI} or {@see Adminer4API}
+ * To use a different SQL admin front-end, instantiate {@see Adminer6API} or {@see Adminer4API}
  * instead - all of them implement {@see SqlAdminApiInterface}.
  *
  * @author andrej.kabachnik
