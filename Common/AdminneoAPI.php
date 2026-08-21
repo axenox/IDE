@@ -66,6 +66,17 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
     protected function getAdminneoAuth(array $connectionConfig, string $connectorClass) : ?array
     {
         $auth = null;
+        
+        // Check for placeholders and replace them if needed
+        $connectionJson = JsonDataType::encodeJson($connectionConfig);
+        if (mb_stripos($connectionJson, '[#') !== false) {
+            $phRenderer = $this->getTemplateRenderer();
+            $connectionJson = $phRenderer->render($connectionJson);
+            $connectionConfig = JsonDataType::decodeJson($connectionJson);
+        }
+        
+        // Translate to AdminNeo's expected keys and formats. AdminNeo does not support all ExFace connectors, so we
+        // return NULL for unsupported ones.
         switch (true) {
             // MySQL, MariaDB, PostgreSQL
             case stripos($connectorClass, 'mariadb') !== false:

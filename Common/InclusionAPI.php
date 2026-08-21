@@ -2,6 +2,11 @@
 namespace axenox\IDE\Common;
 
 use exface\Core\Interfaces\WorkbenchInterface;
+use exface\Core\Templates\BracketHashStringTemplateRenderer;
+use exface\Core\Templates\Placeholders\ConfigPlaceholders;
+use exface\Core\Templates\Placeholders\EnvironmentVariablePlaceholders;
+use exface\Core\Templates\Placeholders\FormulaPlaceholders;
+use exface\Core\Templates\Placeholders\SelectivePlaceholders;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
@@ -175,5 +180,23 @@ class InclusionAPI implements RequestHandlerInterface, WorkbenchDependantInterfa
     protected function getHeadersCommon() : array
     {
         return $this->headers;
+    }
+
+    /**
+     * Returns the default template renderer for all sorts of configs.
+     * 
+     * @return BracketHashStringTemplateRenderer
+     */
+    protected function getTemplateRenderer() : BracketHashStringTemplateRenderer
+    {   
+        $workbench = $this->getWorkbench();
+        $renderer = new BracketHashStringTemplateRenderer($workbench);
+
+        // Add typical non-data placeholders - similar to those used in the AbstractDataConnector::getTemplateRenderer()
+        $renderer->addPlaceholder(new EnvironmentVariablePlaceholders());
+        $renderer->addPlaceholder(new ConfigPlaceholders($workbench));
+        $renderer->addPlaceholder(new FormulaPlaceholders($workbench));
+
+        return $renderer;
     }
 }
