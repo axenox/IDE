@@ -63,7 +63,7 @@
         {
             "_EXPORT_SUMMARY": "SQL admin button for connections",
             "CREATED_ON": "2023-01-26 13:15:43",
-            "MODIFIED_ON": "2025-10-27 18:43:53",
+            "MODIFIED_ON": "2026-08-20 17:50:51",
             "CREATED_BY_USER": "0x11e8fe1c902c8ebea23ee4b318306b9a",
             "MODIFIED_BY_USER": "0x31000000000000000000000000000000",
             "UID": "0x11eda567284f5ca4a567025041000001",
@@ -76,6 +76,52 @@
                 "add_buttons": [
                     {
                         "action_alias": "axenox.IDE.ConnectionSqlAdmin",
+                        "disabled_if": {
+                            "operator": "AND",
+                            "conditions": [
+                                {
+                                    "value_left": "=~input!CONNECTOR",
+                                    "comparator": "!=",
+                                    "value_right": "mysql"
+                                },
+                                {
+                                    "value_left": "=~input!CONNECTOR",
+                                    "comparator": "!=",
+                                    "value_right": "mssql"
+                                },
+                                {
+                                    "value_left": "=~input!CONNECTOR",
+                                    "comparator": "!=",
+                                    "value_right": "postgresql"
+                                },
+                                {
+                                    "value_left": "=~input!CONNECTOR",
+                                    "comparator": "!=",
+                                    "value_right": "ModelLoaderConnector"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "caption": "SQL Admin (old)",
+                        "visibility": "optional",
+                        "action": {
+                            "alias": "exface.core.ShowDialog",
+                            "maximize": true,
+                            "input_object_alias": "exface.Core.CONNECTION",
+                            "input_rows_min": 1,
+                            "input_rows_max": 1,
+                            "icon": "database",
+                            "dialog": {
+                                "object_alias": "exface.Core.CONNECTION",
+                                "widgets": [
+                                    {
+                                        "widget_type": "Browser",
+                                        "value": "=Concatenate('api/ide/adminer/', ALIAS_WITH_NS)"
+                                    }
+                                ]
+                            }
+                        },
                         "disabled_if": {
                             "operator": "AND",
                             "conditions": [
