@@ -52,6 +52,15 @@ class Adminer6API extends InclusionAPI implements SqlAdminApiInterface
     protected function getAdminerAuth(array $connectionConfig, string $connectorClass) : ?array
     {
         $auth = null;
+        
+        // Check for placeholders and replace them if needed
+        $connectionJson = JsonDataType::encodeJson($connectionConfig);
+        if (mb_stripos($connectionJson, '[#') !== false) {
+            $phRenderer = $this->getTemplateRenderer();
+            $connectionJson = $phRenderer->render($connectionJson);
+            $connectionConfig = JsonDataType::decodeJson($connectionJson);
+        }
+        
         switch (true) {
             // MySQL, MariaDB
             case stripos($connectorClass, 'mariadb') !== false:
