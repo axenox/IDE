@@ -37,6 +37,24 @@ if (! function_exists('adminneo_instance')) {
         // vendored, no submodule) plus a clean default theme, so none of that needs a plugin.
         $plugins = [];
 
+        // Cache expensive schema metadata reads (notably MS SQL table/field metadata on large
+        // schemas). AdminneoAPI passes a Workbench PSR cache pool in the wrapper context. The
+        // plugin itself also accepts PSR-6 pools, but the Workbench currently provides PSR-16 by
+        // default. Driver names default to ['mssql'] and can be overridden via
+        // adminneo.config.json: {"schemaMetadataCacheDrivers": ["mssql", "pgsql"]}. Set the
+        // driver list to [] to enable the cache for all drivers, or set schemaMetadataCache to
+        // false to disable it.
+        $schemaMetadataCache = $context['schemaMetadataCache'] ?? null;
+        if (($config['schemaMetadataCache'] ?? true) !== false && $schemaMetadataCache) {
+            require_once dirname(getcwd()) . DIRECTORY_SEPARATOR . 'plugins' . DIRECTORY_SEPARATOR . 'SchemaMetadataCachePlugin.php';
+            $plugins[] = new \AdminNeo\SchemaMetadataCachePlugin(
+                $schemaMetadataCache,
+                $config['schemaMetadataCacheDrivers'] ?? ['mssql'],
+                $config['schemaMetadataCacheTtl'] ?? 300,
+                $config['schemaMetadataCacheNamespace'] ?? 'adminneo.schema'
+            );
+        }
+
         // Allow embedding the SQL admin in an IFrame. By default AdminNeo sends
         // "X-Frame-Options: DENY" (see \AdminNeo\page_headers()), which blocks the IDE from
         // showing the tool in an iframe - our primary way of using it. The stock
