@@ -56,11 +56,11 @@ if (! function_exists('adminneo_instance')) {
         // for browsing direct and reverse foreign-key relations in a modal, which replaces the old
         // Adminer 4 plugin used by app designers. The plugin is stored in axenox/adminneo so it can
         // be maintained together with AdminNeo UI changes and reused outside the Power UI wrapper.
-        if (($config['treeViewer'] ?? true) !== false) {
-            require_once dirname(getcwd()) . DIRECTORY_SEPARATOR . 'plugins' . DIRECTORY_SEPARATOR . 'TreeViewerPlugin.php';
+        $pluginPath = dirname(getcwd()) . DIRECTORY_SEPARATOR . 'plugins' . DIRECTORY_SEPARATOR . 'TreeViewerPlugin.php';
+        if (file_exists($pluginPath)) {
+            require_once $pluginPath;
             $plugins[] = new \AdminNeo\TreeViewerPlugin();
         }
-
         return \AdminNeo\ExfaceAdmin::create($config, $plugins);
     }
 }
