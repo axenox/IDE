@@ -6,6 +6,7 @@
 	"jsonValuesDetection": true,
 	"jsonValuesAutoFormat": true,
 	"relationLinks": true,
+	"treeViewer": true,
 	"recordsPerPage": 30,
 	"outputFlushing": false,
 	"copyData": false,
