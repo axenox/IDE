@@ -10,6 +10,9 @@
 	"outputFlushing": false,
 	"copyData": false,
 	"identitySeedFromDefault": true,
+	"schemaMetadataCache": true,
+	"schemaMetadataCacheDrivers": ["mssql"],
+	"schemaMetadataCacheTtl": 300,
 	"frameAncestors": ["self"],
 	"hiddenDatabases": ["__system"],
 	"hiddenSchemas": ["__system"]

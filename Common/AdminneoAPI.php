@@ -44,6 +44,9 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
     /** URL segment (below the facade route) under which this API is mounted. */
     const URL_SEGMENT = 'adminneo/';
 
+    /** Workbench cache pool name used by the AdminNeo schema metadata cache plugin. */
+    const CACHE_POOL = 'adminneo';
+
     /**
      *
      * {@inheritDoc}
@@ -387,7 +390,11 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
     }
 
     /**
-     * Publishes the context (config, service title) the wrapper reads to build the Admin instance.
+     * Publishes the context (config, service title and services) the wrapper reads to build AdminNeo.
+     *
+     * The schema metadata cache plugin expects a PSR cache instance. The Workbench cache can return
+     * either PSR-16 or PSR-6 pools; we use a dedicated pool so SQL-admin metadata can be cleared or
+     * tuned separately from other application cache entries.
      *
      * @param array $config
      * @return void
@@ -396,7 +403,8 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
     {
         $GLOBALS[self::CONTEXT_GLOBAL] = [
             'config' => $config,
-            'serviceTitle' => 'SQL Admin'
+            'serviceTitle' => 'SQL Admin',
+            'schemaMetadataCache' => $this->getWorkbench()->getCache()->getPool(self::CACHE_POOL)
         ];
     }
 
