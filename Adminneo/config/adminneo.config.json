@@ -11,6 +11,7 @@
 	"outputFlushing": false,
 	"copyData": false,
 	"identitySeedFromDefault": true,
+	"useNamedConstraints": true,
 	"frameAncestors": ["self"],
 	"hiddenDatabases": ["__system"],
 	"hiddenSchemas": ["__system"]
