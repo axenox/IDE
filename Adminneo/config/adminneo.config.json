@@ -1,7 +1,7 @@
 {
 	"colorVariant": "blue",
 	"navigationMode": "dual",
-	"preferSelection": true,
+	"preferSelection": false,
 	"versionVerification": false,
 	"jsonValuesDetection": true,
 	"jsonValuesAutoFormat": true,
