@@ -32,10 +32,10 @@ if (! function_exists('adminneo_instance')) {
         $context = $GLOBALS['axenox_ide_adminneo'] ?? [];
         $config = $context['config'] ?? [];
 
-        // Add stock or ExFace plugins here if needed - the Plugins manager chains them
-        // automatically. AdminNeo itself ships SQL highlighting and autocomplete (jush is
-        // vendored, no submodule) plus a clean default theme, so none of that needs a plugin.
-        $plugins = [];
+        // The integration owns the authenticated user session, so embedded AdminNeo must not
+        // provide a competing local logout control.
+        require_once __DIR__ . '/HideLogoutPlugin.php';
+        $plugins = [new \AdminNeo\HideLogoutPlugin()];
 
         // Allow embedding the SQL admin in an IFrame. By default AdminNeo sends
         // "X-Frame-Options: DENY" (see \AdminNeo\page_headers()), which blocks the IDE from
