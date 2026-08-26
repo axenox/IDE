@@ -394,9 +394,12 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
      */
     protected function setAdminneoContext(array $config) : void
     {
+        $basePath = rtrim((string) parse_url($this->getWorkbench()->getUrl(), PHP_URL_PATH), '/') . '/';
         $GLOBALS[self::CONTEXT_GLOBAL] = [
             'config' => $config,
-            'serviceTitle' => 'SQL Admin'
+            'serviceTitle' => 'SQL Admin',
+            'mermaidUrl' => $basePath . 'vendor/exface/core/Facades/AbstractAjaxFacade/js/mermaid.min.js',
+            'svgPanZoomUrl' => $basePath . 'vendor/exface/core/Facades/AbstractAjaxFacade/js/svg-pan-zoom.min.js'
         ];
     }
 
