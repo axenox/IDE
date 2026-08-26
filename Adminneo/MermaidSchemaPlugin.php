@@ -1,0 +1,182 @@
+<?php
+
+namespace AdminNeo;
+
+/**
+ * Replaces AdminNeo's draggable schema view with an interactive Mermaid ER diagram.
+ *
+ * Mermaid and svg-pan-zoom are supplied by the host application so the plugin neither downloads
+ * assets nor imposes a second library version. Views and cross-database foreign keys are omitted,
+ * matching AdminNeo's native schema page.
+ */
+class MermaidSchemaPlugin extends Plugin
+{
+    private string $mermaidUrl;
+    private string $panZoomUrl;
+
+    /** Creates a schema renderer using pinned, locally hosted JavaScript distributions. */
+    public function __construct(string $mermaidUrl, string $panZoomUrl)
+    {
+        $this->mermaidUrl = $mermaidUrl;
+        $this->panZoomUrl = $panZoomUrl;
+    }
+
+    /** Loads diagram assets and AdminNeo-themed interaction styles on the schema route only. */
+    public function printToHead(): void
+    {
+        if (!isset($_GET['schema'])) {
+            return;
+        }
+        echo script_src($this->mermaidUrl), script_src($this->panZoomUrl);
+        echo <<<'HTML'
+<style>
+.mermaid-schema { position: relative; height: calc(100vh - 9rem); min-height: 30rem; overflow: hidden; border: 1px solid var(--panel-border); border-radius: var(--box-border-radius); background: var(--body-bg); }
+.mermaid-schema > svg { width: 100%; height: 100%; }
+.mermaid-schema .svg-hover-highlight { stroke-width: 4px !important; }
+.mermaid-schema .svg-selected { stroke-width: 6px !important; }
+.mermaid-schema-menu { position: fixed; z-index: 20; min-width: 14rem; padding: .75rem 1rem; background: var(--panel-bg); color: var(--body-text); border: 1px solid var(--panel-border); border-radius: var(--box-border-radius); box-shadow: 0 4px 18px rgba(0,0,0,.2); }
+.mermaid-schema-menu h3 { margin: 0 0 .5rem; color: var(--header-text); font-size: 1rem; }
+.mermaid-schema-menu p { margin: .4rem 0; color: var(--note-text); }
+.mermaid-schema-menu ul { margin: 0; padding-left: 1.25rem; }
+.mermaid-schema-menu .button { margin: .3rem .4rem 0 0; }
+.mermaid-schema-error { padding: 1rem; color: var(--message-error-text); background: var(--message-error-bg); border: 1px solid var(--message-error-border); }
+</style>
+HTML;
+    }
+
+    /** Collects table metadata and prints the Mermaid diagram plus its interaction controller. */
+    public function printDatabaseSchema(): ?bool
+    {
+        $tables = [];
+        $allFields = Driver::get()->getAllFields();
+        foreach (table_status('', true) as $tableName => $status) {
+            if (is_view($status)) continue;
+            $tables[$tableName] = ['id' => self::identifier('t', $tableName), 'name' => $tableName, 'fields' => $allFields[$tableName] ?? [], 'relations' => []];
+        }
+
+        foreach ($tables as $tableName => &$table) {
+            $fieldsByName = [];
+            foreach ($table['fields'] as $field) $fieldsByName[$field['field']] = $field;
+            foreach ($this->admin->getForeignKeys($tableName) as $foreignKey) {
+                $target = $foreignKey['table'] ?? '';
+                if (!empty($foreignKey['db']) || !isset($tables[$target])) continue;
+                $nullable = false;
+                foreach ((array) $foreignKey['source'] as $source) if (!empty($fieldsByName[$source]['null'])) $nullable = true;
+                $table['relations'][] = ['target' => $target, 'sourceColumns' => array_values((array) $foreignKey['source']), 'targetColumns' => array_values((array) $foreignKey['target']), 'nullable' => $nullable];
+            }
+        }
+        unset($table);
+
+        $lines = ['erDiagram'];
+        foreach ($tables as $table) {
+            $lines[] = '    ' . $table['id'] . '["' . self::mermaidText($table['name']) . '"] {';
+            $foreignColumns = [];
+            foreach ($table['relations'] as $relation) $foreignColumns = array_merge($foreignColumns, $relation['sourceColumns']);
+            foreach ($table['fields'] as $field) {
+                $keys = [];
+                if (!empty($field['primary'])) $keys[] = 'PK';
+                if (in_array($field['field'], $foreignColumns, true)) $keys[] = 'FK';
+                $type = self::mermaidToken($field['full_type'] ?? $field['type'] ?? 'value');
+                $name = self::mermaidToken($field['field']);
+                $comment = trim(($field['field'] !== $name ? $field['field'] . ' ' : '') . ($field['comment'] ?? ''));
+                $line = "        $type $name" . ($keys ? ' ' . implode(',', $keys) : '');
+                if ($comment !== '') $line .= ' "' . self::mermaidText($comment) . '"';
+                $lines[] = $line;
+            }
+            $lines[] = '    }';
+        }
+
+        $relations = [];
+        foreach ($tables as $table) {
+            foreach ($table['relations'] as $relation) {
+                // The source is the child/many side. Its FK points to exactly one or optionally one target.
+                $targetEnd = $relation['nullable'] ? 'o|' : '||';
+                $label = implode(', ', $relation['sourceColumns']) . ' → ' . implode(', ', $relation['targetColumns']);
+                $lines[] = '    ' . $table['id'] . ' }o--' . $targetEnd . ' ' . $tables[$relation['target']]['id'] . ' : "' . self::mermaidText($label) . '"';
+                $relations[] = ['source' => $table['id'], 'target' => $tables[$relation['target']]['id'], 'label' => $label];
+            }
+        }
+
+        $metadata = ['tables' => array_values($tables), 'relations' => $relations];
+        echo '<div id="mermaid-schema" class="mermaid-schema"><pre class="mermaid">', h(implode("\n", $lines)), '</pre></div>';
+        echo '<div id="mermaid-schema-menu" class="mermaid-schema-menu hidden"></div>';
+        echo '<script type="application/json" id="mermaid-schema-data">', self::jsonForHtml($metadata), '</script>';
+        echo script($this->clientScript());
+        return true;
+    }
+
+    /** Converts arbitrary database identifiers to stable Mermaid grammar identifiers. */
+    public static function identifier(string $prefix, string $value): string { return $prefix . '_' . substr(sha1($value), 0, 16); }
+
+    /** Converts a value to a Mermaid-safe unquoted token while preserving uniqueness. */
+    private static function mermaidToken(string $value): string
+    {
+        $readable = preg_replace('/[^A-Za-z0-9_]/', '_', $value);
+        if ($readable === '' || ctype_digit($readable[0])) $readable = 'v_' . $readable;
+        return substr($readable, 0, 40) . '_' . substr(sha1($value), 0, 8);
+    }
+
+    /** Escapes text embedded in a Mermaid quoted label or comment. */
+    private static function mermaidText(string $value): string { return str_replace(["\\", '"', "\r", "\n"], ['\\\\', '&quot;', ' ', ' '], $value); }
+
+    /** Encodes metadata safely inside a non-executable HTML script element. */
+    private static function jsonForHtml(array $value): string
+    {
+        return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    }
+
+    /** Returns the browser controller for rendering, pan/zoom, selection and context actions. */
+    private function clientScript(): string
+    {
+        return <<<'JS'
+(async () => {
+    const host = document.getElementById('mermaid-schema');
+    const menu = document.getElementById('mermaid-schema-menu');
+    const metadata = JSON.parse(document.getElementById('mermaid-schema-data').textContent);
+    const showError = error => host.replaceChildren(Object.assign(document.createElement('div'), {className: 'mermaid-schema-error', textContent: 'The database diagram could not be rendered: ' + (error.message || error)}));
+    try {
+        mermaid.initialize({startOnLoad: false, securityLevel: 'strict', theme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default'});
+        await mermaid.run({nodes: [host.querySelector('.mermaid')]});
+        const svg = host.querySelector('svg');
+        if (!svg) throw new Error('Mermaid did not create an SVG element.');
+        svg.setAttribute('height', host.clientHeight + 'px');
+        svg.style.maxWidth = 'none';
+        const panZoom = svgPanZoom(svg, {zoomEnabled: true, controlIconsEnabled: true, fit: true, center: true, preventMouseEventsDefault: false});
+        const selected = new Set();
+        const clearSelection = () => { selected.forEach(node => node.classList.remove('svg-selected')); selected.clear(); menu.classList.add('hidden'); };
+        const placeMenu = event => { menu.style.left = Math.min(event.clientX + 10, innerWidth - 250) + 'px'; menu.style.top = Math.min(event.clientY + 10, innerHeight - 180) + 'px'; menu.classList.remove('hidden'); };
+        const addText = (parent, tag, text) => { const child = document.createElement(tag); child.textContent = text; parent.appendChild(child); return child; };
+        const actionUrl = (action, table) => { const url = new URL(location.href); ['schema', 'table', 'select', 'create'].forEach(key => url.searchParams.delete(key)); url.searchParams.set(action, table); return url.href; };
+        const centerNode = node => { const box = node.getBBox(), sizes = panZoom.getSizes(), zoom = sizes.realZoom; panZoom.pan({x: sizes.width / 2 - (box.x + box.width / 2) * zoom, y: sizes.height / 2 - (box.y + box.height / 2) * zoom}); };
+        const entityNodes = Array.from(svg.querySelectorAll('[id^="entity-"]'));
+        entityNodes.forEach(node => {
+            const table = metadata.tables.find(candidate => node.id.includes(candidate.id));
+            if (!table) return;
+            node.addEventListener('mouseenter', () => node.classList.add('svg-hover-highlight'));
+            node.addEventListener('mouseleave', () => node.classList.remove('svg-hover-highlight'));
+            node.addEventListener('click', event => {
+                event.stopPropagation(); clearSelection(); node.classList.add('svg-selected'); selected.add(node); menu.replaceChildren();
+                addText(menu, 'h3', table.name); addText(menu, 'p', 'Actions');
+                const list = document.createElement('ul');
+                [['select', 'Select data'], ['table', 'Show structure'], ['create', 'Alter table']].forEach(action => { const item = document.createElement('li'); const link = document.createElement('a'); link.textContent = action[1]; link.href = actionUrl(action[0], table.name); link.target = '_blank'; item.appendChild(link); list.appendChild(item); });
+                menu.appendChild(list); placeMenu(event);
+            });
+        });
+        Array.from(svg.querySelectorAll('.relationshipLine')).forEach((path, index) => {
+            const hit = path.cloneNode(false); hit.removeAttribute('marker-start'); hit.removeAttribute('marker-end'); hit.style.cssText = 'stroke:transparent;stroke-width:20;fill:none;pointer-events:stroke'; path.after(hit);
+            hit.addEventListener('mouseenter', () => path.classList.add('svg-hover-highlight'));
+            hit.addEventListener('mouseleave', () => path.classList.remove('svg-hover-highlight'));
+            hit.addEventListener('click', event => {
+                event.stopPropagation(); clearSelection(); path.classList.add('svg-selected'); selected.add(path); menu.replaceChildren();
+                const relation = metadata.relations[index]; addText(menu, 'h3', 'Relationship'); addText(menu, 'p', relation ? relation.label : '');
+                [['Source', relation && relation.source], ['Target', relation && relation.target]].forEach(action => { const button = addText(menu, 'button', 'Go to ' + action[0]); button.type = 'button'; button.className = 'button'; button.addEventListener('click', () => { const target = entityNodes.find(node => node.id.includes(action[1])); if (target) centerNode(target); }); });
+                placeMenu(event);
+            });
+        });
+        host.addEventListener('click', event => { if (event.target === host || event.target === svg) clearSelection(); });
+        addEventListener('resize', () => panZoom.resize());
+    } catch (error) { showError(error); }
+})();
+JS;
+    }
+}
