@@ -11,6 +11,9 @@ namespace AdminNeo;
  */
 class MermaidSchemaPlugin extends Plugin
 {
+    /** Keep generated Mermaid source below its default 50,000 character safety limit. */
+    private const MAX_DIAGRAM_TEXT_SIZE = 48000;
+
     private string $mermaidUrl;
     private string $panZoomUrl;
 
@@ -68,7 +71,8 @@ HTML;
         unset($table);
 
         $lines = ['erDiagram'];
-        foreach ($tables as $table) {
+        $commentLines = [];
+        foreach ($tables as $tableName => $table) {
             $lines[] = '    ' . $table['id'] . '["' . self::mermaidText($table['name']) . '"] {';
             $foreignColumns = [];
             foreach ($table['relations'] as $relation) $foreignColumns = array_merge($foreignColumns, $relation['sourceColumns']);
@@ -80,7 +84,10 @@ HTML;
                 $name = self::mermaidToken($field['field']);
                 $comment = trim(($field['field'] !== $name ? $field['field'] . ' ' : '') . ($field['comment'] ?? ''));
                 $line = "        $type $name" . ($keys ? ' ' . implode(',', $keys) : '');
-                if ($comment !== '') $line .= ' "' . self::mermaidText($comment) . '"';
+                if ($comment !== '') {
+                    $commentLines[count($lines)] = ['base' => $line, 'comment' => $comment, 'table' => $tableName, 'field' => $field['field']];
+                    $line .= ' "' . self::mermaidText($comment) . '"';
+                }
                 $lines[] = $line;
             }
             $lines[] = '    }';
@@ -97,8 +104,26 @@ HTML;
             }
         }
 
+        // Mermaid rejects the complete diagram definition (not an individual label) above its
+        // default 50,000 character limit. Reduce the longest optional column descriptions first,
+        // while retaining their full values in metadata for SVG tooltips.
+        $diagramText = implode("\n", $lines);
+        uasort($commentLines, function (array $left, array $right): int {
+            return strlen(self::mermaidText($right['comment'])) <=> strlen(self::mermaidText($left['comment']));
+        });
+        foreach ($commentLines as $lineNumber => $commentLine) {
+            if (strlen($diagramText) <= self::MAX_DIAGRAM_TEXT_SIZE) break;
+            $excess = strlen($diagramText) - self::MAX_DIAGRAM_TEXT_SIZE;
+            $escapedLength = strlen(self::mermaidText($commentLine['comment']));
+            $shortened = self::truncateMermaidText($commentLine['comment'], max(3, $escapedLength - $excess));
+            if ($shortened === $commentLine['comment']) continue;
+            $lines[$lineNumber] = $commentLine['base'] . ' "' . self::mermaidText($shortened) . '"';
+            $tables[$commentLine['table']]['truncatedFields'][] = $commentLine['field'];
+            $diagramText = implode("\n", $lines);
+        }
+
         $metadata = ['tables' => array_values($tables), 'relations' => $relations];
-        echo '<div id="mermaid-schema" class="mermaid-schema"><pre class="mermaid">', h(implode("\n", $lines)), '</pre></div>';
+        echo '<div id="mermaid-schema" class="mermaid-schema"><pre class="mermaid">', h($diagramText), '</pre></div>';
         echo '<div id="mermaid-schema-menu" class="mermaid-schema-menu hidden"></div>';
         echo '<script type="application/json" id="mermaid-schema-data">', self::jsonForHtml($metadata), '</script>';
         echo script($this->clientScript());
@@ -119,6 +144,23 @@ HTML;
     /** Escapes text embedded in a Mermaid quoted label or comment. */
     private static function mermaidText(string $value): string { return str_replace(["\\", '"', "\r", "\n"], ['\\\\', '&quot;', ' ', ' '], $value); }
 
+    /** Truncates Unicode text to an escaped byte budget and marks the omitted part. */
+    private static function truncateMermaidText(string $value, int $maxBytes): string
+    {
+        if (strlen(self::mermaidText($value)) <= $maxBytes) return $value;
+        $characters = preg_split('//u', $value, -1, PREG_SPLIT_NO_EMPTY);
+        if ($characters === false) return '...';
+        $low = 0;
+        $high = count($characters);
+        while ($low < $high) {
+            $length = (int) ceil(($low + $high) / 2);
+            $candidate = implode('', array_slice($characters, 0, $length)) . '...';
+            if (strlen(self::mermaidText($candidate)) <= $maxBytes) $low = $length;
+            else $high = $length - 1;
+        }
+        return implode('', array_slice($characters, 0, $low)) . '...';
+    }
+
     /** Encodes metadata safely inside a non-executable HTML script element. */
     private static function jsonForHtml(array $value): string
     {
@@ -135,7 +177,8 @@ HTML;
     const metadata = JSON.parse(document.getElementById('mermaid-schema-data').textContent);
     const showError = error => host.replaceChildren(Object.assign(document.createElement('div'), {className: 'mermaid-schema-error', textContent: 'The database diagram could not be rendered: ' + (error.message || error)}));
     try {
-        mermaid.initialize({startOnLoad: false, securityLevel: 'strict', theme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default'});
+        const sourceLength = host.querySelector('.mermaid').textContent.length;
+        mermaid.initialize({startOnLoad: false, securityLevel: 'strict', maxTextSize: Math.max(50000, sourceLength + 1), theme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default'});
         await mermaid.run({nodes: [host.querySelector('.mermaid')]});
         const svg = host.querySelector('svg');
         if (!svg) throw new Error('Mermaid did not create an SVG element.');
@@ -152,6 +195,12 @@ HTML;
         entityNodes.forEach(node => {
             const table = metadata.tables.find(candidate => node.id.includes(candidate.id));
             if (!table) return;
+            if (table.truncatedFields && table.truncatedFields.length) {
+                const descriptions = table.fields.filter(field => table.truncatedFields.includes(field.field)).map(field => field.field + ': ' + (field.comment || ''));
+                const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+                title.textContent = descriptions.join('\n');
+                node.insertBefore(title, node.firstChild);
+            }
             node.addEventListener('mouseenter', () => node.classList.add('svg-hover-highlight'));
             node.addEventListener('mouseleave', () => node.classList.remove('svg-hover-highlight'));
             node.addEventListener('click', event => {
