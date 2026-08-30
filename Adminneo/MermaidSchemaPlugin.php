@@ -45,6 +45,7 @@ class MermaidSchemaPlugin extends Plugin
 .mermaid-schema-filter label { display: grid; gap: .25rem; }
 .mermaid-schema-filter input[type="search"] { min-width: min(26rem, 55vw); }
 .mermaid-schema-filter input[type="number"] { width: 6rem; }
+.mermaid-schema-filter input[type="submit"] { margin-bottom: 3px; }
 .mermaid-schema { position: relative; height: calc(100vh - 13rem); min-height: 30rem; overflow: visible; }
 .mermaid-schema > svg { width: 100%; height: 100%; }
 .mermaid-schema .svg-hover-highlight { stroke-width: 4px !important; }
