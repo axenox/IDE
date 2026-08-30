@@ -14,6 +14,10 @@ class MermaidSchemaPlugin extends Plugin
     /** Keep generated Mermaid source below its default 50,000 character safety limit. */
     private const MAX_DIAGRAM_TEXT_SIZE = 48000;
 
+    /** Default and user-selectable bounds for recursive foreign-key traversal. */
+    private const DEFAULT_RELATION_DEPTH = 3;
+    private const MAX_RELATION_DEPTH = 10;
+
     private string $mermaidUrl;
     private string $panZoomUrl;
 
@@ -24,16 +28,24 @@ class MermaidSchemaPlugin extends Plugin
         $this->panZoomUrl = $panZoomUrl;
     }
 
-    /** Loads diagram assets and AdminNeo-themed interaction styles on the schema route only. */
+    /** Loads diagram assets and AdminNeo-themed interaction styles and table actions. */
     public function printToHead(): void
     {
         if (!isset($_GET['schema'])) {
+            $tableName = $_GET['table'] ?? $_GET['select'] ?? null;
+            if ($tableName !== null) {
+                echo script($this->openSchemaLinkScript((string) $tableName));
+            }
             return;
         }
         echo script_src($this->mermaidUrl), script_src($this->panZoomUrl);
         echo <<<'HTML'
 <style>
-.mermaid-schema { position: relative; height: calc(100vh - 9rem); min-height: 30rem; overflow: hidden; border: 1px solid var(--panel-border); border-radius: var(--box-border-radius); background: var(--body-bg); }
+.mermaid-schema-filter .fieldset-content { display: flex; flex-wrap: wrap; align-items: end; gap: .75rem; }
+.mermaid-schema-filter label { display: grid; gap: .25rem; }
+.mermaid-schema-filter input[type="search"] { min-width: min(26rem, 55vw); }
+.mermaid-schema-filter input[type="number"] { width: 6rem; }
+.mermaid-schema { position: relative; height: calc(100vh - 13rem); min-height: 30rem; overflow: visible; }
 .mermaid-schema > svg { width: 100%; height: 100%; }
 .mermaid-schema .svg-hover-highlight { stroke-width: 4px !important; }
 .mermaid-schema .svg-selected { stroke-width: 6px !important; }
@@ -50,6 +62,10 @@ HTML;
     /** Collects table metadata and prints the Mermaid diagram plus its interaction controller. */
     public function printDatabaseSchema(): ?bool
     {
+        $filter = trim((string) ($_GET['schema-filter'] ?? ''));
+        $depth = ($_GET['schema-depth'] ?? '') === '' ? self::DEFAULT_RELATION_DEPTH : (int) $_GET['schema-depth'];
+        $depth = max(0, min(self::MAX_RELATION_DEPTH, $depth));
+
         $tables = [];
         $allFields = Driver::get()->getAllFields();
         foreach (table_status('', true) as $tableName => $status) {
@@ -62,13 +78,39 @@ HTML;
             foreach ($table['fields'] as $field) $fieldsByName[$field['field']] = $field;
             foreach ($this->admin->getForeignKeys($tableName) as $foreignKey) {
                 $target = $foreignKey['table'] ?? '';
-                if (!empty($foreignKey['db']) || !isset($tables[$target])) continue;
+                // Drivers may qualify local keys with the current catalog/schema. Only omit keys
+                // that really leave the schema represented by this diagram.
+                if (!self::isLocalForeignKey($foreignKey) || !isset($tables[$target])) continue;
                 $nullable = false;
                 foreach ((array) $foreignKey['source'] as $source) if (!empty($fieldsByName[$source]['null'])) $nullable = true;
                 $table['relations'][] = ['target' => $target, 'sourceColumns' => array_values((array) $foreignKey['source']), 'targetColumns' => array_values((array) $foreignKey['target']), 'nullable' => $nullable];
             }
         }
         unset($table);
+
+        // Discover related tables against the complete graph before pruning edges to the subset
+        // that Mermaid will render.
+        $tables = self::filterRelatedTables($tables, $filter, $depth);
+        foreach ($tables as &$table) {
+            $table['relations'] = array_values(array_filter($table['relations'], function (array $relation) use ($tables): bool {
+                return isset($tables[$relation['target']]);
+            }));
+        }
+        unset($table);
+
+        echo '<form class="mermaid-schema-filter" action="', h(BASE_URL), '" method="get">';
+        hidden_fields_get();
+        echo input_hidden('db', DB), input_hidden('ns', $_GET['ns'] ?? ''), input_hidden('schema', '');
+        // Reuse the database overview's fieldset classes for consistent themed framing.
+        echo '<div class="field-sets"><fieldset><legend>Filter tables</legend><div class="fieldset-content">';
+        echo '<label>', lang('Table'), '<input type="search" class="input" name="schema-filter" value="', h($filter), '" autofocus></label>';
+        echo '<label>Relation depth<input type="number" class="input" name="schema-depth" value="', $depth, '" min="0" max="', self::MAX_RELATION_DEPTH, '"></label>';
+        echo '<input type="submit" class="button" value="', lang('Search'), '"></div></fieldset></div></form>';
+
+        if (!$tables) {
+            echo '<p class="message">', lang('No tables.'), '</p>';
+            return true;
+        }
 
         $lines = ['erDiagram'];
         $commentLines = [];
@@ -130,6 +172,57 @@ HTML;
         return true;
     }
 
+    /** Returns whether a foreign key points to the database and schema currently being rendered. */
+    private static function isLocalForeignKey(array $foreignKey): bool
+    {
+        $database = (string) ($foreignKey['db'] ?? '');
+        if ($database !== '' && strcasecmp($database, DB) !== 0) return false;
+
+        $schema = (string) ($foreignKey['ns'] ?? '');
+        $currentSchema = (string) ($_GET['ns'] ?? '');
+        return $schema === '' || $currentSchema === '' || strcasecmp($schema, $currentSchema) === 0;
+    }
+
+    /** Keeps name matches and every table reachable through foreign keys up to the given depth. */
+    private static function filterRelatedTables(array $tables, string $filter, int $depth): array
+    {
+        if ($filter === '') return $tables;
+
+        // Treat foreign keys as undirected for discovery: users need both referenced tables and
+        // tables that reference a name match.
+        $adjacent = array_fill_keys(array_keys($tables), []);
+        foreach ($tables as $tableName => $table) {
+            foreach ($table['relations'] as $relation) {
+                $target = $relation['target'];
+                if (!isset($adjacent[$target])) continue;
+                $adjacent[$tableName][$target] = true;
+                $adjacent[$target][$tableName] = true;
+            }
+        }
+
+        $included = [];
+        $queue = [];
+        foreach ($tables as $tableName => $table) {
+            if (stripos($tableName, $filter) === false) continue;
+            $included[$tableName] = 0;
+            $queue[] = $tableName;
+        }
+
+        // Breadth-first traversal assigns the shortest relation distance from any name match.
+        for ($offset = 0; isset($queue[$offset]); $offset++) {
+            $tableName = $queue[$offset];
+            $distance = $included[$tableName];
+            if ($distance >= $depth) continue;
+            foreach ($adjacent[$tableName] as $relatedName => $unused) {
+                if (isset($included[$relatedName])) continue;
+                $included[$relatedName] = $distance + 1;
+                $queue[] = $relatedName;
+            }
+        }
+
+        return array_intersect_key($tables, $included);
+    }
+
     /** Converts arbitrary database identifiers to stable Mermaid grammar identifiers. */
     public static function identifier(string $prefix, string $value): string { return $prefix . '_' . substr(sha1($value), 0, 16); }
 
@@ -162,9 +255,37 @@ HTML;
     }
 
     /** Encodes metadata safely inside a non-executable HTML script element. */
-    private static function jsonForHtml(array $value): string
+    private static function jsonForHtml($value): string
     {
         return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    }
+
+    /** Returns a controller that adds a filtered schema link to native table tabs. */
+    private function openSchemaLinkScript(string $tableName): string
+    {
+        $icon = icon('schema');
+        $label = 'Open schema';
+        $tableJson = self::jsonForHtml($tableName);
+        $contentJson = self::jsonForHtml($icon . $label);
+        return <<<JS
+addEventListener('DOMContentLoaded', () => {
+    const tabs = document.querySelector('.top-tabs');
+    if (!tabs) return;
+    // AdminNeo has no hook for appending one native table tab, so augment the rendered menu while
+    // retaining its ordering, icons and help link.
+    const url = new URL(location.href);
+    ['table', 'select', 'create', 'view', 'edit'].forEach(key => url.searchParams.delete(key));
+    url.searchParams.set('schema', '');
+    url.searchParams.set('schema-filter', $tableJson);
+    url.searchParams.set('schema-depth', '3');
+    const link = document.createElement('a');
+    link.href = url.href;
+    link.innerHTML = $contentJson;
+    const help = tabs.querySelector('a[target="_blank"]');
+    tabs.insertBefore(document.createTextNode(' '), help);
+    tabs.insertBefore(link, help);
+});
+JS;
     }
 
     /** Returns the browser controller for rendering, pan/zoom, selection and context actions. */
