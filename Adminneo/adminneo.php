@@ -60,6 +60,16 @@ if (! function_exists('adminneo_instance')) {
             $plugins[] = new \AdminNeo\MermaidSchemaPlugin($context['mermaidUrl'], $context['svgPanZoomUrl']);
         }
 
+        // Infer navigation links from column naming conventions when the connection explicitly
+        // provides a relation_matcher regular expression.
+        if (! empty($config['relationMatcher']) && is_string($config['relationMatcher'])) {
+            $regexForeignKeysPath = dirname(getcwd()) . DIRECTORY_SEPARATOR . 'plugins' . DIRECTORY_SEPARATOR . 'RegexForeignKeys.php';
+            if (file_exists($regexForeignKeysPath)) {
+                require_once $regexForeignKeysPath;
+                $plugins[] = new \AdminNeo\RegexForeignKeys($config['relationMatcher']);
+            }
+        }
+
         // Enable the forked tree viewer in the IDE by default. It adds a row action on select pages
         // for browsing direct and reverse foreign-key relations in a modal, which replaces the old
         // Adminer 4 plugin used by app designers. The plugin is stored in axenox/adminneo so it can
