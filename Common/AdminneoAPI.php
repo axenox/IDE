@@ -88,7 +88,8 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
                     'password' => $connectionConfig['password'] ?? '',
                     'driver' => $this->getAdminneoDriver($connectorClass),
                     'db'    => $connectionConfig['dbase'] ?? '',
-                    'ssl'   => []
+                    'ssl'   => [],
+                    'relationMatcher' => $connectionConfig['relation_matcher'] ?? null
                 ];
                 if (null !== $sslVal = $connectionConfig['ssl_key'] ?? null) {
                     $auth['ssl']['sslKey'] = $this->getPathInWorkbench($sslVal);
@@ -108,7 +109,8 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
                     'password' => $connectionConfig['PWD'] ?? $connectionConfig['password'] ?? '',
                     'driver' => $this->getAdminneoDriver($connectorClass),
                     'db'    => $connectionConfig['database'] ?? $connectionConfig['dbase'] ?? '',
-                    'ssl'   => []
+                    'ssl'   => [],
+                    'relationMatcher' => $connectionConfig['relation_matcher'] ?? null
                 ];
                 // MS SQL connection specifics (TrustServerCertificate, Encrypt, ...) map onto
                 // AdminNeo's first-class SSL config keys instead of being appended to the host.
@@ -332,6 +334,9 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
      *
      * @param string $selector
      * @param array $auth
+     * The optional relationMatcher value originates from the connection UXON property
+     * relation_matcher and enables AdminNeo's RegexForeignKeys plugin in the wrapper.
+     *
      * @return array
      */
     protected function buildAdminneoConfig(string $selector, array $auth) : array
@@ -353,6 +358,9 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
             'defaultPasswordHash' => '',
             'servers' => [$selector => $server]
         ];
+        if (! empty($auth['relationMatcher'])) {
+            $config['relationMatcher'] = $auth['relationMatcher'];
+        }
 
         // Optional user-provided defaults (theme, colorVariant, navigationMode, ...). Kept in a
         // JSON file so the look & feel and future behaviour flags are configurable without code.
