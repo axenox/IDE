@@ -356,6 +356,7 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
         $config = [
             // No default password required - AdminNeo connects with the configured credentials.
             'defaultPasswordHash' => '',
+            'embeddedMode' => true,
             'servers' => [$selector => $server]
         ];
         if (! empty($auth['relationMatcher'])) {
@@ -368,13 +369,6 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
             if (! array_key_exists($key, $config)) {
                 $config[$key] = $val;
             }
-        }
-
-        // Embedded rendering captures AdminNeo's output, so mid-render flushing must be disabled by
-        // default: a bare flush() would commit the HTTP headers early and break the facade's PSR-7
-        // response (see launchAdminneo()). Overridable via "outputFlushing" in adminneo.config.json.
-        if (! array_key_exists('outputFlushing', $config)) {
-            $config['outputFlushing'] = false;
         }
 
         return $config;
@@ -469,8 +463,8 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
             // page call ob_flush()/flush() mid-render. The callback buffer below returns an empty
             // string to swallow the *content* of those flushes, but the bare flush() still forces
             // mod_php to commit the HTTP headers immediately - which then breaks the facade's own
-            // PSR-7 response with "headers already sent". The "outputFlushing" config option (see
-            // buildAdminneoConfig() and \AdminNeo\flush_output()) tells the fork to skip these
+            // PSR-7 response with "headers already sent". Embedded mode (see buildAdminneoConfig()
+            // and \AdminNeo\flush_output()) tells the fork to skip these
             // mid-render flushes while we capture, so the whole page is emitted in one piece.
             $captured = '';
             $collector = function (string $chunk) use (&$captured) : string {
@@ -490,7 +484,7 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
                     ob_end_flush();
                 }
                 if (ob_get_level() >= $baseLevel) {
-                    ob_end_flush();
+                    ob_end_clean();
                 }
                 chdir($cwd);
             }
