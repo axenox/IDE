@@ -32,10 +32,14 @@ if (! function_exists('adminneo_instance')) {
         $context = $GLOBALS['axenox_ide_adminneo'] ?? [];
         $config = $context['config'] ?? [];
 
-        // The integration owns the authenticated user session, so embedded AdminNeo must not
-        // provide a competing local logout control.
-        require_once __DIR__ . '/HideLogoutPlugin.php';
-        $plugins = [new \AdminNeo\HideLogoutPlugin()];
+        $embeddedMode = $config['embeddedMode'] ?? false;
+        $plugins = [];
+        if ($embeddedMode) {
+            // The integration owns the authenticated user session, so embedded AdminNeo must not
+            // provide a competing local logout control.
+            require_once __DIR__ . '/HideLogoutPlugin.php';
+            $plugins[] = new \AdminNeo\HideLogoutPlugin();
+        }
 
         // Allow embedding the SQL admin in an IFrame. By default AdminNeo sends
         // "X-Frame-Options: DENY" (see \AdminNeo\page_headers()), which blocks the IDE from
@@ -47,7 +51,7 @@ if (! function_exists('adminneo_instance')) {
         // Composer-autoloaded, so require the file explicitly; getcwd() is the fork's admin/
         // folder, with plugins/ a sibling of it.
         $frameAncestors = $config['frameAncestors'] ?? ['self'];
-        if (! empty($frameAncestors)) {
+        if ($embeddedMode && ! empty($frameAncestors)) {
             require_once dirname(getcwd()) . DIRECTORY_SEPARATOR . 'plugins' . DIRECTORY_SEPARATOR . 'FrameSupportPlugin.php';
             $plugins[] = new \AdminNeo\FrameSupportPlugin($frameAncestors);
         }

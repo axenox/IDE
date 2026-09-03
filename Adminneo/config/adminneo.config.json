@@ -6,7 +6,6 @@
 	"jsonValuesDetection": true,
 	"jsonValuesAutoFormat": true,
 	"recordsPerPage": 30,
-	"outputFlushing": false,
 	"copyData": false,
 	"identitySeedFromDefault": true,
 	"useNamedConstraints": true,
