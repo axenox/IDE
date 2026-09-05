@@ -430,13 +430,37 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
             }
             session_write_close();
         }
+
         session_name(self::SESSION_NAME);
+        $sessionId = $_COOKIE[self::SESSION_NAME] ?? '';
+        if ($sessionId !== '' && preg_match('/^[a-zA-Z0-9,-]+$/', $sessionId)) {
+            session_id($sessionId);
+        } else {
+            // ExFace leaves its own session ID configured after closing that session. Clear it so
+            // AdminNeo does not reuse the workbench session and generate mismatched CSRF tokens.
+            $sessionId = '';
+            session_id('');
+        }
         session_start();
+
+        if ($sessionId !== session_id()) {
+            $sessionId = session_id();
+            $params = session_get_cookie_params();
+            setcookie(
+                self::SESSION_NAME,
+                $sessionId,
+                0,
+                $params['path'],
+                $params['domain'],
+                $params['secure'],
+                $params['httponly']
+            );
+        }
         // Tell AdminNeo that a session cookie is in use so it emits clean, cookie-based URLs
         // instead of appending the session id to every link (see AdminNeo\sid()). Without this the
         // first rendered page carries `?<name>=<sid>` links and, because PHP ignores the URL id
         // (session.use_only_cookies), clicking them would start a fresh, logged-out session.
-        $_COOKIE[self::SESSION_NAME] = session_id();
+        $_COOKIE[self::SESSION_NAME] = $sessionId;
     }
 
     /**
