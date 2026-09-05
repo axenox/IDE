@@ -259,9 +259,62 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
                 break;
         }
 
+        if ($this->mustStreamAdminneoResponse()) {
+            $this->launchAdminneo(false);
+            return new Response(200, $this->getResponseHeaders());
+        }
+
         $html = $this->launchAdminneo(true);
-        $headers = array_merge(headers_list(), $this->getHeadersCommon());
-        return new Response(200, $headers, $html);
+        return new Response(200, $this->getResponseHeaders(), $html);
+    }
+
+    /**
+     * Returns TRUE for responses that AdminNeo emits and terminates before control returns here.
+     *
+     * @return bool
+     */
+    protected function mustStreamAdminneoResponse() : bool
+    {
+        $isAjax = strcasecmp($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '', 'XMLHttpRequest') === 0;
+        $isResultExport = isset($_POST['export']) && (isset($_GET['sql']) || isset($_GET['select']));
+        return $isAjax || isset($_GET['download']) || $isResultExport;
+    }
+
+    /**
+     * Converts headers emitted by AdminNeo into the map expected by a PSR-7 response.
+     *
+     * @return string[][]|string[]
+     */
+    protected function getResponseHeaders() : array
+    {
+        $headers = $this->getHeadersCommon();
+        return $this->mergeResponseHeaders($headers, headers_list());
+    }
+
+    /**
+     * Adds raw PHP headers to a PSR-7 header map without losing repeated cookies.
+     *
+     * @param array $headers
+     * @param string[] $nativeHeaders
+     * @return string[][]|string[]
+     */
+    protected function mergeResponseHeaders(array $headers, array $nativeHeaders) : array
+    {
+        foreach ($nativeHeaders as $header) {
+            $separator = strpos($header, ':');
+            if ($separator === false) {
+                continue;
+            }
+
+            $name = trim(substr($header, 0, $separator));
+            $value = trim(substr($header, $separator + 1));
+            if (strcasecmp($name, 'Set-Cookie') === 0) {
+                $headers[$name] = array_merge((array) ($headers[$name] ?? []), [$value]);
+            } else {
+                $headers[$name] = $value;
+            }
+        }
+        return $headers;
     }
 
     /**
