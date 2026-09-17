@@ -25,8 +25,8 @@ use Psr\Http\Message\ServerRequestInterface;
  * - It is configured through a plain PHP array ({@see \AdminNeo\Admin::create()}). The current
  *   data connection is registered as a pre-configured server, which lets us auto-login without
  *   touching the fork's source (no session/CSRF core patch, as was needed for Adminer).
- * - Driver options (incl. the MS SQL TrustServerCertificate/Encrypt flags) are first-class config
- *   keys, so connection specifics are expressed as configuration rather than as core hacks.
+ * - Driver options, including native MS SQL SQLSRV connection options, are first-class config
+ *   values, so connection specifics are expressed as configuration rather than host-string hacks.
  *
  * To use a different SQL admin front-end, instantiate {@see Adminer6API} or {@see Adminer4API}
  * instead - all of them implement {@see SqlAdminApiInterface}.
@@ -112,12 +112,13 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
                     'ssl'   => [],
                     'relationMatcher' => $connectionConfig['relation_matcher'] ?? null
                 ];
-                // MS SQL connection specifics (TrustServerCertificate, Encrypt, ...) map onto
-                // AdminNeo's first-class SSL config keys instead of being appended to the host.
+                // Pass native SQLSRV options through while also mapping AdminNeo's first-class SSL keys.
                 $options = $connectionConfig['connection_options'] ?? null;
                 if (is_string($options)) {
                     $options = json_decode($options, true) ?: [];
                 }
+
+                $auth['ssl']['connectionOptions'] = (array) $options;
                 foreach ((array) $options as $optKey => $optVal) {
                     switch (strtolower((string) $optKey)) {
                         case 'trustservercertificate':
