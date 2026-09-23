@@ -661,6 +661,25 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
     }
 
     /**
+        * {@inheritDoc}
+        * @see SqlAdminApiInterface::explainSql()
+     */
+    public function explainSql(SqlDataConnectorInterface $connection, string $sql) : array
+    {
+        $this->bootForConnection($connection);
+        $result = \AdminNeo\explain(\AdminNeo\Connection::get(), $sql);
+        if (! is_object($result)) {
+            return [];
+        }
+
+        $rows = [];
+        while ($row = $result->fetchAssoc()) {
+            $rows[] = $row;
+        }
+        return $rows;
+    }
+
+    /**
      * Boots AdminNeo for programmatic access (exportDDL/runSql) and connects to the given data
      * connection without rendering a usable page.
      *

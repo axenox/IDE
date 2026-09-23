@@ -406,6 +406,15 @@ class Adminer6API extends InclusionAPI implements SqlAdminApiInterface
         return \Adminer\get_rows($sql);
     }
 
+    /**
+     * {@inheritDoc}
+     * @see SqlAdminApiInterface::explainSql()
+     */
+    public function explainSql(SqlDataConnectorInterface $connection, string $sql) : array
+    {
+        return [];
+    }
+
     protected function getApiUrlPath(SqlDataConnectorInterface $connection, ?string $function = null, ?string $schema = null) : string
     {
         // adminer/suedlink_tpcde_db_azure_dev?mssql=kmtssqlsrvdev.database.windows.net&username=kmtsadmin&db=SuedLinkKmtsDev&ns=dbo&dump=

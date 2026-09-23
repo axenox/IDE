@@ -43,4 +43,15 @@ interface SqlAdminApiInterface extends RequestHandlerInterface, WorkbenchDependa
      * @return array
      */
     public function runSql(SqlDataConnectorInterface $connection, string $sql) : array;
+
+    /**
+     * Returns the dialect-specific EXPLAIN result for an SQL query when supported.
+     *
+     * Implementations without programmatic EXPLAIN support return an empty array.
+     *
+     * @param SqlDataConnectorInterface $connection
+     * @param string $sql
+     * @return array
+     */
+    public function explainSql(SqlDataConnectorInterface $connection, string $sql) : array;
 }
