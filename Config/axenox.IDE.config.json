@@ -20,5 +20,5 @@
 		"X-XSS-Protection": "1; mode=block"
 	},
 	"FACADE.BUST_BROWSER_CACHE": false,
-	"SQL_ADMIN.ENGINE": "adminer"
+	"SQL_ADMIN.ENGINE": "adminneo"
 }

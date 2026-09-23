@@ -600,6 +600,8 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
     }
 
     /**
+     * Returns the DDL for a table, view, stored procedure or function.
+     *
      * {@inheritDoc}
      * @see SqlAdminApiInterface::exportDDL()
      */
@@ -609,17 +611,43 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
 
         // AdminNeo exposes DDL helpers as namespaced functions defined by the active driver
         // (e.g. \AdminNeo\create_sql), mirroring how the fork's own pages call them.
-        $tableStatus = \AdminNeo\table_status1($tableOrViewName);
+        // Do not use table_status1() here: it returns a synthetic status for unknown tables,
+        // which would misclassify routines (including MS SQL table-valued functions) as tables.
+        $tableStatuses = \AdminNeo\table_status($tableOrViewName);
+        $tableStatus = $tableStatuses ? reset($tableStatuses) : null;
         if ($tableStatus && \AdminNeo\is_view($tableStatus)) {
             $viewStatus = \AdminNeo\view($tableOrViewName);
             return "CREATE VIEW $tableOrViewName AS \n" . $viewStatus['select'];
         }
 
-        $dump = \AdminNeo\create_sql($tableOrViewName, false, $style);
-        if (empty($dump)) {
-            $dump = '-- ERROR: table "' . $tableOrViewName . '" not found in schema/tablespace "' . $schema . '"';
+        if ($tableStatus) {
+            return \AdminNeo\create_sql($tableOrViewName, false, $style);
         }
-        return $dump;
+
+        $routineDdls = [];
+        foreach (\AdminNeo\Admin::get()->getRoutines() as $routineInfo) {
+            $routineType = strtoupper($routineInfo['ROUTINE_TYPE']);
+            // PostgreSQL uses SPECIFIC_NAME to distinguish overloads, while callers normally use
+            // ROUTINE_NAME. Accept both and return every overload matching the public name.
+            if (! in_array($routineType, ['PROCEDURE', 'FUNCTION'], true)
+                || (strcasecmp($routineInfo['ROUTINE_NAME'], $tableOrViewName) !== 0
+                    && strcasecmp($routineInfo['SPECIFIC_NAME'], $tableOrViewName) !== 0)) {
+                continue;
+            }
+
+            $routine = \AdminNeo\routine($routineInfo['SPECIFIC_NAME'], $routineType);
+            if ($routine) {
+                // The active driver preserves its native routine syntax; for MS SQL this returns
+                // the complete sys.sql_modules definition, including table-valued functions.
+                $routineDdls[] = \AdminNeo\Driver::get()->getRoutineScript($routineInfo['ROUTINE_NAME'], $routineType, $routine);
+            }
+        }
+
+        if ($routineDdls) {
+            return implode(";\n\n", $routineDdls);
+        }
+
+        return '-- ERROR: table, view, stored procedure or function "' . $tableOrViewName . '" not found in schema/tablespace "' . $schema . '"';
     }
 
     /**

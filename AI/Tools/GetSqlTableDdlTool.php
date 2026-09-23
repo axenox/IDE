@@ -13,7 +13,7 @@ use exface\Core\Interfaces\DataTypes\DataTypeInterface;
 use exface\Core\Interfaces\WorkbenchInterface;
 
 /**
- * This AI tool allows an LLM to fetch the JSON of a log details widget we see when clicking on a log entry in the log viewer.
+ * Returns the DDL of a table, view, stored procedure or function from an SQL database.
  */
 class GetSqlTableDdlTool extends CallSqlTool
 {    
@@ -23,20 +23,23 @@ class GetSqlTableDdlTool extends CallSqlTool
      */
     public function invoke(AiAgentInterface $agent, AiPromptInterface $prompt, array $arguments): AiToolResultInterface
     {
-        list($tableName, $schema) = $arguments;
+        list($tableName, $schema, $connectionAlias) = $arguments;
         
-        $result = $this->getDDL($this->getConnection($agent, $prompt), $tableName, $schema);
+        $result = $this->getDDL($this->getConnection($agent, $prompt, $connectionAlias), $tableName, $schema);
         return new AiToolResultString($this, $arguments, $result, $this->getReturnDataType());
     }
 
     /**
+     * Returns the CREATE statement for a table, view or routine supported by the active SQL admin API.
+     *
      * @param SqlDataConnectorInterface $connection
-     * @param string $tableName
+     * @param string $tableName Legacy argument name; may also contain a view, procedure or function name.
      * @param string|null $schema
      * @return string
      */
     protected function getDDL(SqlDataConnectorInterface $connection, string $tableName, ?string $schema = null): string
     {
+        // Stored procedure and function export is currently implemented by AdminneoAPI only.
         return $this->getSqlAdminApi()->exportDDL($connection, $tableName, $schema);
     }
 
@@ -50,10 +53,13 @@ class GetSqlTableDdlTool extends CallSqlTool
         return [
             (new ServiceParameter($self))
                 ->setName('table_name')
-                ->setDescription('Table name with schema prefix if necessary'),
+                ->setDescription('Name of the table, view, stored procedure or function without schema prefix'),
             (new ServiceParameter($self))
                 ->setName('schema')
-                ->setDescription('Table name with schema prefix if necessary')
+                ->setDescription('Schema containing the table, view, stored procedure or function'),
+            (new ServiceParameter($self))
+                ->setName('data_connection_alias')
+                ->setDescription('Namespaced alias of the data connection to use for the SQL DB: e.g. "exface.Core.METAMODEL_DB"')
         ];
     }
 
