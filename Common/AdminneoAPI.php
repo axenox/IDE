@@ -661,6 +661,39 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
     }
 
     /**
+     * {@inheritDoc}
+     * @see SqlAdminApiInterface::runSqlWithRuntimeStatistics()
+     */
+    public function runSqlWithRuntimeStatistics(SqlDataConnectorInterface $connection, string $sql) : array
+    {
+        $this->bootForConnection($connection);
+        $driver = \AdminNeo\Driver::get();
+        if (! \AdminNeo\support('runtime_statistics') || ! $driver->isRuntimeStatisticsQuery($sql)) {
+            return ['rows' => \AdminNeo\get_rows($sql), 'statistics' => []];
+        }
+
+        $collectStatistics = true;
+        $executeSeparately = $driver->runtimeStatisticsExecuteSeparately();
+        if (! $executeSeparately) {
+            $collectStatistics = $driver->startRuntimeStatistics();
+        }
+
+        $rows = [];
+        $statistics = [];
+        $querySucceeded = false;
+        try {
+            $rows = \AdminNeo\get_rows($sql);
+            $querySucceeded = true;
+        } finally {
+            if ($collectStatistics && (! $executeSeparately || $querySucceeded)) {
+                $statistics = $driver->finishRuntimeStatistics($sql);
+            }
+        }
+
+        return ['rows' => $rows, 'statistics' => $statistics];
+    }
+
+    /**
         * {@inheritDoc}
         * @see SqlAdminApiInterface::explainSql()
      */

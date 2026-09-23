@@ -20,13 +20,14 @@ use this tool for migrations, maintenance commands or any intentional data chang
 - **data_connection_alias:** Optional namespaced alias of the SQL data connection. The SQL admin
   assistant can instead obtain the connection from its prompt.
 - **explain:** Boolean tool argument. Set it to `true` to append AdminNeo's dialect-specific EXPLAIN
-  result for this invocation. Defaults to `false`. Adminer integrations return an empty result.
+  result and, when supported by the database driver, actual runtime and I/O statistics for this
+  invocation. Defaults to `false`. Adminer integrations return empty diagnostic results.
 
 ### Result
 
 The result rows are formatted as a Markdown table. When multiple queries are enabled, they are
-executed separately and each result table is placed below a numbered heading. Enabled EXPLAIN output
-is appended below its query result.
+executed separately and each result table is placed below a numbered heading. Enabled EXPLAIN and
+runtime statistics output is appended below its query result.
 
 ### Read-only limitations
 
