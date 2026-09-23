@@ -45,6 +45,17 @@ interface SqlAdminApiInterface extends RequestHandlerInterface, WorkbenchDependa
     public function runSql(SqlDataConnectorInterface $connection, string $sql) : array;
 
     /**
+     * Runs an SQL query and returns its rows together with normalized runtime statistics.
+     *
+     * Implementations without runtime statistics support return an empty statistics array.
+     *
+     * @param SqlDataConnectorInterface $connection
+     * @param string $sql
+     * @return array{rows: array, statistics: array}
+     */
+    public function runSqlWithRuntimeStatistics(SqlDataConnectorInterface $connection, string $sql) : array;
+
+    /**
      * Returns the dialect-specific EXPLAIN result for an SQL query when supported.
      *
      * Implementations without programmatic EXPLAIN support return an empty array.

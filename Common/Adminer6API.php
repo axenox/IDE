@@ -408,6 +408,15 @@ class Adminer6API extends InclusionAPI implements SqlAdminApiInterface
 
     /**
      * {@inheritDoc}
+     * @see SqlAdminApiInterface::runSqlWithRuntimeStatistics()
+     */
+    public function runSqlWithRuntimeStatistics(SqlDataConnectorInterface $connection, string $sql) : array
+    {
+        return ['rows' => $this->runSql($connection, $sql), 'statistics' => []];
+    }
+
+    /**
+     * {@inheritDoc}
      * @see SqlAdminApiInterface::explainSql()
      */
     public function explainSql(SqlDataConnectorInterface $connection, string $sql) : array

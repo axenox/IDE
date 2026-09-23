@@ -45,10 +45,17 @@ class SQLReadTool extends SQLPerformTool
         $sqlAdminApi = $this->getSqlAdminApi();
         $results = [];
         foreach (SqlSelectQueryValidator::splitStatements($statement) as $query) {
-            $queryResult = MarkdownDataType::buildMarkdownTableFromArray($sqlAdminApi->runSql($connection, $query));
             if ($explain) {
+                $executionResult = $sqlAdminApi->runSqlWithRuntimeStatistics($connection, $query);
+                $queryResult = MarkdownDataType::buildMarkdownTableFromArray($executionResult['rows']);
                 $explainResult = MarkdownDataType::buildMarkdownTableFromArray($sqlAdminApi->explainSql($connection, $query));
                 $queryResult .= "\n\n#### Explain\n\n" . $explainResult;
+                if ($executionResult['statistics'] !== []) {
+                    $statisticsResult = MarkdownDataType::buildMarkdownTableFromArray($executionResult['statistics']);
+                    $queryResult .= "\n\n#### Runtime statistics\n\n" . $statisticsResult;
+                }
+            } else {
+                $queryResult = MarkdownDataType::buildMarkdownTableFromArray($sqlAdminApi->runSql($connection, $query));
             }
             $results[] = $queryResult;
         }

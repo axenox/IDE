@@ -21,15 +21,17 @@ Datenveraenderungen geeignet.
   beginnen, wenn ihre abschliessende Operation ein `SELECT` ist.
 - **data_connection_alias:** Optionaler Namespace-Alias der SQL-Datenverbindung. Der SQL-Admin-
   Assistent kann die Verbindung alternativ aus seinem Prompt beziehen.
-- **explain:** Boolesches Werkzeugargument. Mit `true` wird das dialektspezifische EXPLAIN-Ergebnis
-  von AdminNeo fuer diesen Aufruf angehaengt. Der Standardwert ist `false`. Die Adminer-
-  Integrationen geben ein leeres Ergebnis zurueck.
+- **explain:** Boolesches Werkzeugargument. Mit `true` werden das dialektspezifische EXPLAIN-Ergebnis
+  von AdminNeo und, falls vom Datenbanktreiber unterstuetzt, tatsaechliche Laufzeit- und E/A-
+  Statistiken fuer diesen Aufruf angehaengt. Der Standardwert ist `false`. Die Adminer-
+  Integrationen geben leere Diagnoseergebnisse zurueck.
 
 ### Ergebnis
 
 Die Ergebniszeilen werden als Markdown-Tabelle formatiert. Wenn mehrere Abfragen erlaubt sind,
 werden sie einzeln ausgefuehrt und jede Ergebnistabelle unter einer nummerierten Ueberschrift
-ausgegeben. Aktivierte EXPLAIN-Ausgaben werden unter dem jeweiligen Abfrageergebnis angehaengt.
+ausgegeben. Aktivierte EXPLAIN- und Laufzeitstatistik-Ausgaben werden unter dem jeweiligen
+Abfrageergebnis angehaengt.
 
 ### Einschraenkungen des Nur-Lese-Zugriffs
 
