@@ -41,6 +41,12 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
     /** Dedicated PHP session name so AdminNeo does not share the workbench session cookie. */
     const SESSION_NAME = 'axenox_ide_adminneo';
 
+    /** @var string|null */
+    private $outerSessionName = null;
+
+    /** @var string|null */
+    private $outerSessionId = null;
+
     /** URL segment (below the facade route) under which this API is mounted. */
     const URL_SEGMENT = 'adminneo/';
 
@@ -478,6 +484,11 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
      */
     protected function startIsolatedSession() : void
     {
+        if ($this->outerSessionName === null) {
+            $this->outerSessionName = session_name();
+            $this->outerSessionId = session_id();
+        }
+
         if (session_status() === PHP_SESSION_ACTIVE) {
             if (session_name() === self::SESSION_NAME) {
                 return;
@@ -515,6 +526,25 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
         // first rendered page carries `?<name>=<sid>` links and, because PHP ignores the URL id
         // (session.use_only_cookies), clicking them would start a fresh, logged-out session.
         $_COOKIE[self::SESSION_NAME] = $sessionId;
+    }
+
+    /**
+     * Closes AdminNeo's session and restores the outer session identity for the workbench.
+     *
+     * @return void
+     */
+    protected function restoreOuterSession() : void
+    {
+        if ($this->outerSessionName === null) {
+            return;
+        }
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+        session_name($this->outerSessionName);
+        session_id($this->outerSessionId);
+        $this->outerSessionName = null;
+        $this->outerSessionId = null;
     }
 
     /**
@@ -565,6 +595,7 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
                     ob_end_clean();
                 }
                 chdir($cwd);
+                $this->restoreOuterSession();
             }
             return ltrim($captured, "\0");
         }
