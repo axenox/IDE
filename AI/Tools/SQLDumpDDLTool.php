@@ -14,8 +14,10 @@ use exface\Core\Interfaces\WorkbenchInterface;
 
 /**
  * Returns the DDL of a table, view, stored procedure or function from an SQL database.
+ * 
+ * @author Andrej Kabachnik, Brooklyn Fränzschky
  */
-class GetSqlTableDdlTool extends CallSqlTool
+class SQLDumpDDLTool extends SQLPerformTool
 {    
     /**
      * {@inheritDoc}
@@ -53,13 +55,17 @@ class GetSqlTableDdlTool extends CallSqlTool
         return [
             (new ServiceParameter($self))
                 ->setName('table_name')
-                ->setDescription('Name of the table, view, stored procedure or function without schema prefix'),
+                ->setDescription('Name of the table, view, stored procedure or function without schema prefix')
+                ->setRequired(true),
             (new ServiceParameter($self))
                 ->setName('schema')
-                ->setDescription('Schema containing the table, view, stored procedure or function'),
+                ->setRequired(true)
+                ->setDescription('Schema containing the table, view, stored procedure or function. Use `null` if it is not applicable'),
             (new ServiceParameter($self))
-                ->setName('data_connection_alias')
-                ->setDescription('Namespaced alias of the data connection to use for the SQL DB: e.g. "exface.Core.METAMODEL_DB"')
+                ->setName('connection')
+                ->setRequired(true)
+                ->setDescription('UID or namespaced alias of the SQL data connection.')
+                ->setExamples(['exface.Core.METAMODEL_DB', '0x11ea72c00f0fadeca3480205857feb80'])
         ];
     }
 

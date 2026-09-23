@@ -3,11 +3,7 @@ namespace axenox\IDE\AI\Agents;
 
 use axenox\GenAI\AI\Agents\GenericAssistant;
 use axenox\GenAI\Exceptions\AiAgentRuntimeError;
-use axenox\GenAI\Factories\AiFactory;
 use axenox\GenAI\Interfaces\AiPromptInterface;
-use axenox\IDE\AI\Tools\CallSqlTool;
-use axenox\IDE\AI\Tools\GetSqlTableDdlTool;
-use exface\Core\CommonLogic\UxonObject;
 use exface\Core\Factories\DataConnectionFactory;
 use exface\Core\Interfaces\DataSources\SqlDataConnectorInterface;
 use exface\Core\Templates\Placeholders\ArrayPlaceholders;
@@ -57,7 +53,9 @@ class SqlAdminAssistant extends GenericAssistant
         $concepts = parent::getConcepts($prompt, $configRenderer);
         $connection = $this->getSqlConnection($prompt);
         $concepts[] = new ArrayPlaceholders([
-            '~sql_dialect' => $connection->getSqlDialect()
+            '~sql_dialect' => $connection->getSqlDialect(),
+            '~sql_connection_alias' => $connection->getAliasWithNamespace(),
+            '~sql_connection_uid' => $connection->getId()
         ]);
         
         return $concepts;

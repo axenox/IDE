@@ -61,79 +61,9 @@
     ],
     "rows": [
         {
-            "_EXPORT_SUMMARY": "SQL admin assistant v2.00",
-            "CREATED_ON": "2026-01-20 19:42:21",
-            "MODIFIED_ON": "2026-06-26 07:57:26",
-            "CREATED_BY_USER": "0x31000000000000000000000000000000",
-            "MODIFIED_BY_USER": "0x31000000000000000000000000000000",
-            "UID": "0x11f0adfbc15b1aecadfb025041000001",
-            "PROTOTYPE_CLASS": "axenox/ide/AI/Agents/SqlAdminAssistant.php",
-            "DATA_CONNECTION_DEFAULT": null,
-            "CONFIG_UXON": {
-                "tools": {
-                    "get_sql_table_ddl": {
-                        "arguments": [
-                            {
-                                "name": "table_name",
-                                "data_type": {
-                                    "alias": "exface.Core.String"
-                                },
-                                "description": "Name of the table without schema prefix"
-                            },
-                            {
-                                "name": "schema",
-                                "data_type": {
-                                    "alias": "exface.Core.String"
-                                }
-                            }
-                        ],
-                        "description": "Returns the DDL statement to create the given table including foreign keys and constraints"
-                    }
-                },
-                "concepts": {
-                    "metamodel_dbml": {
-                        "class": "\\axenox\\GenAI\\AI\\Concepts\\SqlDbmlConcept",
-                        "object_filters": {
-                            "operator": "AND",
-                            "conditions": [
-                                {
-                                    "value": "[#~input:UID#]",
-                                    "comparator": "==",
-                                    "expression": "DATA_SOURCE__CONNECTION"
-                                }
-                            ]
-                        }
-                    }
-                }
-            },
-            "VERSION": 2,
-            "DESCRIPTION": "",
-            "AI_AGENT": "0x11ef997726a6346a9977025041000001",
-            "ENABLED_FLAG": 0,
-            "INSTRUCTIONS": [
-                "// Multiline text delimited by `\n`",
-                "You will help to modify and query a SQL database. will answer questions about the structure of the following database and will help write SQL. ",
-                "",
-                "The SQL DB is [#~sql_dialect#]",
-                "",
-                "## Instructions",
-                "",
-                "- Only use data that has been given to you in the DMBL. You are not allowed to make anything up!",
-                "- Return the SQL statement and an explanation. Do not attempt to execute the SQL.",
-                "- Use table aliases whereever possible to avoid ambiguous column errors.",
-                "- Answer using the locale: \"[#=User('LOCALE')#]\".",
-                "",
-                "## DBML schema of the database: ",
-                "",
-                "```",
-                "[#metamodel_dbml#] ",
-                "```"
-            ]
-        },
-        {
-            "_EXPORT_SUMMARY": "SQL admin assistant v3.00",
+            "_EXPORT_SUMMARY": "SQL admin assistant v4.0",
             "CREATED_ON": "2026-05-07 13:39:40",
-            "MODIFIED_ON": "2026-06-26 08:00:26",
+            "MODIFIED_ON": "2026-09-23 17:56:10",
             "CREATED_BY_USER": "0x31000000000000000000000000000000",
             "MODIFIED_BY_USER": "0x31000000000000000000000000000000",
             "UID": "0x11f18af46f0330c68af4025041000001",
@@ -184,24 +114,11 @@
                             "*/*/Install/Sql/*.sql"
                         ]
                     },
-                    "get_sql_create_table": {
-                        "alias": "axenox.IDE.GetSqlTableDdlTool",
-                        "arguments": [
-                            {
-                                "name": "table_name",
-                                "data_type": {
-                                    "alias": "exface.Core.String"
-                                },
-                                "description": "Name of the table without schema prefix"
-                            },
-                            {
-                                "name": "schema",
-                                "data_type": {
-                                    "alias": "exface.Core.String"
-                                }
-                            }
-                        ],
-                        "description": "Returns the DDL statement to create the given table including foreign keys and constraints"
+                    "get_ddl": {
+                        "alias": "axenox.IDE.SQLDumpDDLTool"
+                    },
+                    "get_dbml": {
+                        "alias": "axenox.GenAI.SqlDbmlTool"
                     },
                     "read_sql_migrations_folder": {
                         "alias": "axenox.GenAI.FolderReadTool",
@@ -238,7 +155,8 @@
                         "alias": "axenox.GenAI.AppDocsConcept",
                         "depth": 0,
                         "app_alias": "exface.Core",
-                        "starting_page": "Getting_started/introduction.md"
+                        "starting_page": "Getting_started/introduction.md",
+                        "heading_level": 2
                     },
                     "migrations_instructions": {
                         "alias": "axenox.GenAI.MarkdownFilesConcept",
@@ -250,7 +168,7 @@
                     }
                 }
             },
-            "VERSION": 3,
+            "VERSION": 4,
             "DESCRIPTION": "Create migration files using file tools",
             "AI_AGENT": "0x11ef997726a6346a9977025041000001",
             "ENABLED_FLAG": 1,
@@ -260,11 +178,19 @@
                 "",
                 "You are an SQL expert and will help to modify and query the following SQL database. You will answer questions about the structure of the database, help write SQL queries and SQL migrations.",
                 "",
-                "The SQL DB is [#~sql_dialect#]. The tables are described in DBML below. To get more details, use the `get_sql_create_table` tool: it will give you the `CREATE` script for a specific table including constraints, foreign keys, exact data types, etc.",
+                "The database is used by our no-code platform for business web apps.",
                 "",
-                "## Typical tasks",
+                "# Environment",
                 "",
-                "### Write SQL migrations",
+                "You talk to users through a chat beside an integrated AdminNeo PHP database management system. Our users simply call it the \"SQL admin\". The SQL admin can be opened for every SQL data connection separately. ",
+                "",
+                "The user is currently working with the connection with the alias `[#~sql_connection_alias#]`. It is a [#~sql_dialect#] database. The tables are described in DBML below. To get more details, use the `get_ddl` tool - it will give you the `CREATE` script for a specific table including constraints, foreign keys, exact data types, etc.  ",
+                "",
+                "The DB schema is managed on a DEV installation and then deployed to client installations automatically. Changes need to be transported from installation to installation. This is done via migrations scripts.",
+                "",
+                "# Typical tasks",
+                "",
+                "## Write SQL migrations",
                 "",
                 "Users will ask you to write SQL migrtaions. In this case:",
                 "",
@@ -274,16 +200,16 @@
                 "- Use the `write_sql_migration` tool to create new migration files.",
                 "- You must create migrations for every supported DB type, although the user will mostly provide only an example for one of them.",
                 "",
-                "### Improve performance of SQL queries",
+                "## Improve performance of SQL queries",
                 "",
-                "Users may ask you to analyze and improve performance for SQL queries. Since the DBML schema does not include information about indexes and constraints, use the `get_sql_create_table` tool to get the full CREATE DDL for the tables, that you need.",
+                "Users may ask you to analyze and improve performance for SQL queries. Since the DBML schema does not include information about indexes and constraints, use the `get_ddl` tool to get the full CREATE DDL for the tables, that you need.",
                 "",
                 "# General instructions",
                 "",
                 "- Only use data that has been given to you in the DMBL. You are not allowed to make anything up!",
                 "- Return the SQL statement and an explanation. Do not attempt to execute the SQL.",
                 "- Use table aliases whereever possible to avoid ambiguous column errors.",
-                "- Answer using the locale: \"[#=User('LOCALE')#]\".",
+                "- Answer using the user locale: \"[#=User('LOCALE')#]\".",
                 "",
                 "[#migrations_instructions#]",
                 "",
@@ -293,9 +219,7 @@
                 "[#metamodel_dbml#] ",
                 "```",
                 "",
-                "# Background",
-                "",
-                "The database is used by our no-code platform for business web apps. The DB schema is managed on a DEV installation and then deployed to client installations automatically. This is why migrations are important.",
+                "# Platform overview",
                 "",
                 "[#workbench_intro#]"
             ]
