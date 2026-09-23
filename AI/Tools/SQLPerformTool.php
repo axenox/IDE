@@ -22,9 +22,13 @@ use exface\Core\Interfaces\DataTypes\DataTypeInterface;
 use exface\Core\Interfaces\WorkbenchInterface;
 
 /**
- * This AI tool allows an LLM to fetch the JSON of a log details widget we see when clicking on a log entry in the log viewer.
+ * Performs an SQL statement on a database and returns the result as a Markdown table.
+ * 
+ * **WARNING:** This tool is dangerous! NEVER run it on production databases!!!
+ * 
+ * @author Andrej Kabachnik, Brooklyn Fränzschky
  */
-class CallSqlTool extends AbstractAiTool
+class SQLPerformTool extends AbstractAiTool
 {    
     /**
      * {@inheritDoc}
@@ -91,7 +95,13 @@ class CallSqlTool extends AbstractAiTool
         return [
             (new ServiceParameter($self))
                 ->setName('statement')
-                ->setDescription('SQL statement to be performed'),
+                ->setDescription('SQL statement to be performed')
+                ->setRequired(true),
+            (new ServiceParameter($self))
+                ->setName('connection')
+                ->setRequired(true)
+                ->setDescription('UID or namespaced alias of the SQL data connection.')
+                ->setExamples(['exface.Core.METAMODEL_DB', '0x11ea72c00f0fadeca3480205857feb80'])
         ];
     }
 
