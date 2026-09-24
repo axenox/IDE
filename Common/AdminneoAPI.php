@@ -28,8 +28,8 @@ use Psr\Http\Message\ServerRequestInterface;
  * - Driver options, including native MS SQL SQLSRV connection options, are first-class config
  *   values, so connection specifics are expressed as configuration rather than host-string hacks.
  *
- * To use a different SQL admin front-end, instantiate {@see Adminer6API} or {@see Adminer4API}
- * instead - all of them implement {@see SqlAdminApiInterface}.
+ * To use the legacy bundled Adminer front-end, instantiate {@see Adminer4API} instead. Both
+ * implementations use {@see SqlAdminApiInterface}.
  *
  * @author andrej.kabachnik
  */
