@@ -3,8 +3,12 @@ namespace axenox\IDE\Facades;
 
 use axenox\IDE\Common\Adminer4API;
 use axenox\IDE\Common\AdminneoAPI;
+use exface\Core\CommonLogic\Filesystem\LocalFileInfo;
 use exface\Core\DataTypes\FilePathDataType;
 use exface\Core\Exceptions\Facades\FacadeRoutingError;
+use exface\Core\Exceptions\Facades\HttpBadRequestError;
+use exface\Core\Exceptions\FileNotAccessibleError;
+use exface\Core\Exceptions\FileNotFoundError;
 use exface\Core\Interfaces\Selectors\AliasSelectorInterface;
 use GuzzleHttp\Psr7\Uri;
 use kabachello\Codiware\Middleware\CodiwareMiddleware;
@@ -103,8 +107,37 @@ class IDEFacade extends AbstractHttpFacade
                 throw new FacadeRoutingError('No app alias specified in URL - expected format: /api/ide/codiware/repo/{appAlias}/...');
             }
             $appFolder = str_replace(AliasSelectorInterface::ALIAS_NAMESPACE_DELIMITER, '/', $appAlias);
-            $appFolder = FilePathDataType::findPathCaseInsensitive($appFolder, $vendorFolder);
-            $config['ALLOWED_ROOTS'] = [$appFolder];
+
+            try {
+                $appFolder = FilePathDataType::findPathCaseInsensitive($appFolder, $vendorFolder);
+            } catch (FileNotFoundError) {
+                throw new HttpBadRequestError($request, 'Cannot open App/repo "' . $appAlias . '" in IDE: the app could not be found in the vendor folder!');
+            }
+            $appFolderInfo = new LocalFileInfo($appFolder, $vendorFolder);
+            if (! $appFolderInfo->isDir()) {
+                throw new HttpBadRequestError($request, 'Cannot open App/repo "' . $appAlias . '" in IDE: the resolved path is not a directory!');
+            }
+            $missingAccess = [];
+            if (! $appFolderInfo->isReadable()) {
+                $missingAccess[] = 'read/list/traverse';
+            }
+            if (! $appFolderInfo->isWritable()) {
+                $missingAccess[] = 'write/create/delete';
+            }
+            if ($missingAccess !== []) {
+                throw new FileNotAccessibleError(
+                    'Cannot open App/repo "' . $appAlias . '" in IDE: OS user lacks ' . implode(' and ', $missingAccess) . ' access!',
+                    null,
+                    null,
+                    $appFolderInfo
+                );
+            }
+            $config['BASE_FOLDER'] = null;
+            $config['ALLOWED_ROOTS'] = [[
+                'alias' => $appFolder,
+                'path' => $appFolderInfo->getPathAbsolute(),
+                'label' => $appAlias,
+            ]];
             $config['CONSOLE.PRESETS'] = array_merge(
                 $this->buildCodiwareConsolePresets($appAlias),
                 (array) ($config['CONSOLE.PRESETS'] ?? [])
