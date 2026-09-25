@@ -5,8 +5,8 @@ use axenox\IDE\Common\Adminer4API;
 use axenox\IDE\Common\AdminneoAPI;
 use exface\Core\CommonLogic\Filesystem\LocalFileInfo;
 use exface\Core\DataTypes\FilePathDataType;
-use exface\Core\Exceptions\Facades\FacadeRoutingError;
 use exface\Core\Exceptions\Facades\HttpBadRequestError;
+use exface\Core\Exceptions\Facades\HttpFacadeRoutingError;
 use exface\Core\Exceptions\FileNotAccessibleError;
 use exface\Core\Exceptions\FileNotFoundError;
 use exface\Core\Interfaces\Selectors\AliasSelectorInterface;
@@ -104,7 +104,7 @@ class IDEFacade extends AbstractHttpFacade
         if (StringDataType::startsWith($pathInFacade, 'codiware/repo/')) {
             $appAlias = StringDataType::substringBefore(StringDataType::substringAfter($pathInFacade, 'codiware/repo/'), '/', '');
             if ($appAlias === '') {
-                throw new FacadeRoutingError('No app alias specified in URL - expected format: /api/ide/codiware/repo/{appAlias}/...');
+                throw new HttpFacadeRoutingError($request, 'No app alias specified in URL - expected format: /api/ide/codiware/repo/{appAlias}/...');
             }
             $appFolder = str_replace(AliasSelectorInterface::ALIAS_NAMESPACE_DELIMITER, '/', $appAlias);
 
@@ -155,18 +155,26 @@ class IDEFacade extends AbstractHttpFacade
             basePath: $apiUriPath
         );
 
-        $passThrough = new class($this->buildHeadersCommon()) implements RequestHandlerInterface {
+        $passThrough = new class($this->getWorkbench(), $apiUriPath, $this->buildHeadersCommon()) implements RequestHandlerInterface {
 
             private array $headers;
+            private string $expectedBasePath;
+            private \exface\Core\Interfaces\WorkbenchInterface $workbench;
 
-            public function __construct(array $headers)
+            public function __construct(\exface\Core\Interfaces\WorkbenchInterface $workbench, string $expectedBasePath, array $headers)
             {
+                $this->workbench = $workbench;
+                $this->expectedBasePath = $expectedBasePath;
                 $this->headers = $headers;
             }
 
             public function handle(ServerRequestInterface $request): ResponseInterface
             {
-                return new Response(404, $this->headers, 'Nothing here yet!');
+                $message = 'Codiware request path "' . $request->getUri()->getPath()
+                    . '" does not match the expected base path "' . $this->expectedBasePath
+                    . '". Check the first URL in the system configuration option SERVER.BASE_URLS.';
+                $this->workbench->getLogger()->logException(new HttpFacadeRoutingError($request, $message), \exface\Core\Interfaces\Log\LoggerInterface::ERROR);
+                return new Response(500, $this->headers, $message);
             }
         };
 
