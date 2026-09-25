@@ -704,12 +704,11 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
         }
 
         $collectStatistics = true;
-        $executeSeparately = $driver->runtimeStatisticsExecuteSeparately();
+        $executeSeparately = $driver->statsNeedSeparateQuery();
         if (! $executeSeparately) {
-            $collectStatistics = $driver->startRuntimeStatistics();
+            $collectStatistics = $driver->statsStart();
         }
 
-        $rows = [];
         $statistics = [];
         $querySucceeded = false;
         try {
@@ -717,7 +716,7 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
             $querySucceeded = true;
         } finally {
             if ($collectStatistics && (! $executeSeparately || $querySucceeded)) {
-                $statistics = $driver->finishRuntimeStatistics($sql);
+                $statistics = $driver->statsFinish($sql);
             }
         }
 
