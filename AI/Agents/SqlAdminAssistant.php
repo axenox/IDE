@@ -6,18 +6,18 @@ use axenox\GenAI\Exceptions\AiAgentRuntimeError;
 use axenox\GenAI\Interfaces\AiPromptInterface;
 use exface\Core\Factories\DataConnectionFactory;
 use exface\Core\Interfaces\DataSources\SqlDataConnectorInterface;
-use exface\Core\Templates\Placeholders\ArrayPlaceholders;
 use exface\Core\Templates\BracketHashStringTemplateRenderer;
+use exface\Core\Templates\Placeholders\ArrayPlaceholders;
 
 /**
  * AI assistant for use with the built-in SQL admin tool (based on PHP Adminer)
- * 
+ *
  * @author Andrej Kabachnik
  */
 class SqlAdminAssistant extends GenericAssistant
 {
     private $sqlConnectionCache = [];
-    
+
     public function getSqlConnection(AiPromptInterface $prompt) : SqlDataConnectorInterface
     {
         foreach ($this->sqlConnectionCache as $cache) {
@@ -29,35 +29,56 @@ class SqlAdminAssistant extends GenericAssistant
         $inputSheet = $prompt->getInputData();
 
         if (! $inputSheet->getMetaObject()->is('exface.Core.CONNECTION')) {
-            throw new AiAgentRuntimeError($this, 'Cannot use object "' . $inputSheet->getMetaObject()->__toString() . '" in SQL AI agent ' . $this->getAliasWithNamespace());
+            throw new AiAgentRuntimeError(
+                $this,
+                'Cannot use object "' .
+                $inputSheet->getMetaObject()->__toString() .
+                '" in SQL AI agent ' .
+                $this->getAliasWithNamespace()
+            );
         }
 
         // TODO add more validation: must have 1 row, must have UID column, etc.
 
         $connectionUid = $inputSheet->getUidColumn()->getValue(0);
-        $connection = DataConnectionFactory::createFromModel($this->getWorkbench(), $connectionUid);
+
+        $connection = DataConnectionFactory::createFromModel(
+            $this->getWorkbench(),
+            $connectionUid
+        );
+
         if (! $connection instanceof SqlDataConnectorInterface) {
-            throw new AiAgentRuntimeError($this, 'Invalid connection type for SQL AI agent: "' . $connection->getAliasWithNamespace() . '" is not an SQL connection!');
+            throw new AiAgentRuntimeError(
+                $this,
+                'Invalid connection type for SQL AI agent: "' .
+                $connection->getAliasWithNamespace() .
+                '" is not an SQL connection!'
+            );
         }
-        
+
         $this->sqlConnectionCache[] = [
             'prompt' => $prompt,
             'connection' => $connection
         ];
-        
+
         return $connection;
     }
-    
-    protected function getConcepts(AiPromptInterface $prompt, BracketHashStringTemplateRenderer $configRenderer) : array
+
+    protected function initConcepts(
+        AiPromptInterface $prompt,
+        ?BracketHashStringTemplateRenderer $configRenderer = null
+    ) : void
     {
-        $concepts = parent::getConcepts($prompt, $configRenderer);
+        if ($this->concepts !== null) {
+            return;
+        }
+
+        parent::initConcepts($prompt, $configRenderer);
+
         $connection = $this->getSqlConnection($prompt);
-        $concepts[] = new ArrayPlaceholders([
-            '~sql_dialect' => $connection->getSqlDialect(),
-            '~sql_connection_alias' => $connection->getAliasWithNamespace(),
-            '~sql_connection_uid' => $connection->getId()
+
+        $this->concepts[] = new ArrayPlaceholders([
+            '~sql_dialect' => $connection->getSqlDialect()
         ]);
-        
-        return $concepts;
     }
 }
