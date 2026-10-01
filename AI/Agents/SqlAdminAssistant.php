@@ -49,16 +49,19 @@ class SqlAdminAssistant extends GenericAssistant
         return $connection;
     }
     
-    protected function getConcepts(AiPromptInterface $prompt, BracketHashStringTemplateRenderer $configRenderer) : array
+    protected function initConcepts(
+        AiPromptInterface $prompt,
+        ?BracketHashStringTemplateRenderer $configRenderer = null
+    ) : void
     {
-        $concepts = parent::getConcepts($prompt, $configRenderer);
+        parent::initConcepts($prompt, $configRenderer);
+    
         $connection = $this->getSqlConnection($prompt);
-        $concepts[] = new ArrayPlaceholders([
+    
+        $this->concepts[] = new ArrayPlaceholders([
             '~sql_dialect' => $connection->getSqlDialect(),
             '~sql_connection_alias' => $connection->getAliasWithNamespace(),
             '~sql_connection_uid' => $connection->getId()
         ]);
-        
-        return $concepts;
     }
 }
