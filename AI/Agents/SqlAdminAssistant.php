@@ -6,6 +6,7 @@ use axenox\GenAI\Exceptions\AiAgentRuntimeError;
 use axenox\GenAI\Interfaces\AiPromptInterface;
 use exface\Core\Factories\DataConnectionFactory;
 use exface\Core\Interfaces\DataSources\SqlDataConnectorInterface;
+use exface\Core\Interfaces\Tasks\TaskInterface;
 use exface\Core\Templates\Placeholders\ArrayPlaceholders;
 use exface\Core\Templates\BracketHashStringTemplateRenderer;
 
@@ -18,15 +19,15 @@ class SqlAdminAssistant extends GenericAssistant
 {
     private $sqlConnectionCache = [];
     
-    public function getSqlConnection(AiPromptInterface $prompt) : SqlDataConnectorInterface
+    public function getSqlConnection(TaskInterface $task) : SqlDataConnectorInterface
     {
         foreach ($this->sqlConnectionCache as $cache) {
-            if ($cache['prompt'] === $prompt) {
+            if ($cache['task'] === $task) {
                 return $cache['connection'];
             }
         }
 
-        $inputSheet = $prompt->getInputData();
+        $inputSheet = $task->getInputData();
 
         if (! $inputSheet->getMetaObject()->is('exface.Core.CONNECTION')) {
             throw new AiAgentRuntimeError($this, 'Cannot use object "' . $inputSheet->getMetaObject()->__toString() . '" in SQL AI agent ' . $this->getAliasWithNamespace());
@@ -41,7 +42,7 @@ class SqlAdminAssistant extends GenericAssistant
         }
         
         $this->sqlConnectionCache[] = [
-            'prompt' => $prompt,
+            'task' => $task,
             'connection' => $connection
         ];
         

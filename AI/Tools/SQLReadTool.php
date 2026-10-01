@@ -5,12 +5,12 @@ use axenox\IDE\AI\Common\SqlSelectQueryValidator;
 use axenox\GenAI\Common\AiToolResultString;
 use axenox\GenAI\Exceptions\AiToolRuntimeError;
 use axenox\GenAI\Interfaces\AiAgentInterface;
-use axenox\GenAI\Interfaces\AiPromptInterface;
 use axenox\GenAI\Interfaces\AiToolResultInterface;
 use exface\Core\CommonLogic\Actions\ServiceParameter;
 use exface\Core\CommonLogic\UxonObject;
 use exface\Core\DataTypes\BooleanDataType;
 use exface\Core\DataTypes\MarkdownDataType;
+use exface\Core\Interfaces\Tasks\TaskInterface;
 use exface\Core\Interfaces\WorkbenchInterface;
 
 /**
@@ -31,7 +31,7 @@ class SQLReadTool extends SQLPerformTool
      * {@inheritDoc}
      * @see AiToolInterface::invoke()
      */
-    public function invoke(AiAgentInterface $agent, AiPromptInterface $prompt, array $arguments): AiToolResultInterface
+    public function invoke(AiAgentInterface $agent, TaskInterface $prompt, array $arguments): AiToolResultInterface
     {
         $statement = $arguments[0] ?? '';
         $connectionAlias = $arguments[1] ?? null;
