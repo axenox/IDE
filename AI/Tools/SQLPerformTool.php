@@ -4,7 +4,7 @@ namespace axenox\IDE\AI\Tools;
 use axenox\GenAI\Common\AbstractAiTool;
 use axenox\GenAI\Common\AiToolResultString;
 use axenox\GenAI\Exceptions\AiToolRuntimeError;
-use axenox\GenAI\Interfaces\AiAgentInterface;
+use axenox\GenAI\Interfaces\AiTaskHandlerInterface;
 use axenox\GenAI\Interfaces\AiToolResultInterface;
 use axenox\IDE\AI\Agents\SqlAdminAssistant;
 use axenox\IDE\Common\Adminer4API;
@@ -34,7 +34,7 @@ class SQLPerformTool extends AbstractAiTool
      * {@inheritDoc}
      * @see AiToolInterface::invoke()
      */
-    public function invoke(AiAgentInterface $agent, TaskInterface $prompt, array $arguments): AiToolResultInterface
+    public function invoke(AiTaskHandlerInterface $agent, TaskInterface $prompt, array $arguments): AiToolResultInterface
     {
         list($statement, $connectionAlias) = $arguments;
         
@@ -42,7 +42,7 @@ class SQLPerformTool extends AbstractAiTool
         return new AiToolResultString($this, $arguments, $result, $this->getReturnDataType());
     }
     
-    protected function getConnection(AiAgentInterface $agent, TaskInterface $prompt, ?string $connectionAlias = null) : SqlDataConnectorInterface
+    protected function getConnection(AiTaskHandlerInterface $agent, TaskInterface $prompt, ?string $connectionAlias = null) : SqlDataConnectorInterface
     {
         switch (true) {
             case $connectionAlias:

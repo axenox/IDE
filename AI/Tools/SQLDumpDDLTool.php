@@ -2,7 +2,7 @@
 namespace axenox\IDE\AI\Tools;
 
 use axenox\GenAI\Common\AiToolResultString;
-use axenox\GenAI\Interfaces\AiAgentInterface;
+use axenox\GenAI\Interfaces\AiTaskHandlerInterface;
 use axenox\GenAI\Interfaces\AiToolResultInterface;
 use exface\Core\CommonLogic\Actions\ServiceParameter;
 use exface\Core\DataTypes\SqlDataType;
@@ -23,7 +23,7 @@ class SQLDumpDDLTool extends SQLPerformTool
      * {@inheritDoc}
      * @see AiToolInterface::invoke()
      */
-    public function invoke(AiAgentInterface $agent, TaskInterface $prompt, array $arguments): AiToolResultInterface
+    public function invoke(AiTaskHandlerInterface $agent, TaskInterface $prompt, array $arguments): AiToolResultInterface
     {
         list($tableName, $schema, $connectionAlias) = $arguments;
         
