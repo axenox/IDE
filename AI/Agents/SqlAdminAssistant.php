@@ -48,20 +48,22 @@ class SqlAdminAssistant extends GenericAssistant
         
         return $connection;
     }
-    
-    protected function initConcepts(
-        AiPromptInterface $prompt,
-        ?BracketHashStringTemplateRenderer $configRenderer = null
-    ) : void
+
+    /**
+     * {@inheritDoc}
+     * @see \axenox\GenAI\AI\Agents\GenericAssistant::getPlaceholderResolvers()
+     */
+    protected function getPlaceholderResolvers(AiPromptInterface $prompt) : array
     {
-        parent::initConcepts($prompt, $configRenderer);
+        $resolvers = parent::getPlaceholderResolvers($prompt);
     
         $connection = $this->getSqlConnection($prompt);
-    
-        $this->concepts[] = new ArrayPlaceholders([
+        $resolvers[] = new ArrayPlaceholders([
             '~sql_dialect' => $connection->getSqlDialect(),
             '~sql_connection_alias' => $connection->getAliasWithNamespace(),
             '~sql_connection_uid' => $connection->getId()
         ]);
+
+        return $resolvers;
     }
 }
