@@ -174,7 +174,7 @@ MD;
 
 ?>
 <pre id="schema" class="mermaid"><?php echo $mermaid; ?></pre>
-<script<?php echo nonce(); ?> src="../../../../exface/core/Facades/AbstractAjaxFacade/js/mermaid.min.js"></script>
+<script<?php echo nonce(); ?> src="../../../../exface/core/Facades/AbstractAjaxFacade/js/mermaid/mermaid.min.js"></script>
 <script<?php echo nonce(); ?> src="../../../../exface/core/Facades/AbstractAjaxFacade/js/msvg-pan-zoom.min.js"></script>
 <script<?php echo nonce(); ?>>
 	mermaid.initialize({

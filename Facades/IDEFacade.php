@@ -91,7 +91,7 @@ class IDEFacade extends AbstractHttpFacade
             "EXTENSIONS.CONFIG" => [
                 "codiware.markdown" => [
                     "INCLUDES.EDITOR_JS" => $baseUriPath . "vendor/exface/jeasyuifacade/Facades/js/toastui-editor-all.min.js",
-                    "INCLUDES.MERMAID_JS" => $baseUriPath . "vendor/exface/core/Facades/AbstractAjaxFacade/js/mermaid.min.js",
+                    "INCLUDES.MERMAID_JS" => $baseUriPath . "vendor/exface/core/Facades/AbstractAjaxFacade/js/mermaid/mermaid.min.js",
                     "INCLUDES.PREVIEW_CSS" => [
                         "npm-asset/github-markdown-css/github-markdown.css",
                         "exface/core/Facades/DocsFacade/template.css"
