@@ -90,7 +90,8 @@ class IDEFacade extends AbstractHttpFacade
             'CACHE_BUST' => $assetVersion,
             "EXTENSIONS.CONFIG" => [
                 "codiware.markdown" => [
-                    "INCLUDES.EDITOR_JS" => $baseUriPath . "vendor/exface/jeasyuifacade/Facades/js/toastui-editor-all.min.js",
+                    "INCLUDES.MARKIAN_JS" => $baseUriPath . "vendor/axenox/markian/dist/markian.min.js",
+                    "INCLUDES.MARKIAN_CSS" => $baseUriPath . "vendor/axenox/markian/dist/markian.css",
                     "INCLUDES.MERMAID_JS" => $baseUriPath . "vendor/exface/core/Facades/AbstractAjaxFacade/js/mermaid/mermaid.min.js",
                     "INCLUDES.PREVIEW_CSS" => [
                         "npm-asset/github-markdown-css/github-markdown.css",
