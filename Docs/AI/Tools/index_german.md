@@ -23,8 +23,11 @@ Datenveraenderungen geeignet.
   Assistent kann die Verbindung alternativ aus seinem Prompt beziehen.
 - **explain:** Boolesches Werkzeugargument. Mit `true` werden das dialektspezifische EXPLAIN-Ergebnis
   von AdminNeo und, falls vom Datenbanktreiber unterstuetzt, tatsaechliche Laufzeit- und E/A-
-  Statistiken fuer diesen Aufruf angehaengt. Der Standardwert ist `false`. Die Adminer-
-  Integrationen geben leere Diagnoseergebnisse zurueck.
+  Statistiken fuer diesen Aufruf angehaengt. Der Standardwert ist `false`.
+
+SQL-Werkzeuge verwenden AdminNeo aus der Abhaengigkeit `axenox/adminneo`. Das gebuendelte Adminer 4
+und der Schalter `SQL_ADMIN.ENGINE` wurden entfernt. Die Fassade akzeptiert sowohl
+`/api/ide/adminneo/` als auch den bisherigen Praefix `/api/ide/adminer/`; beide verwenden AdminNeo.
 
 ### Ergebnis
 

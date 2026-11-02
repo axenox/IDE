@@ -1,16 +1,1 @@
-[
-    {
-        "name": "vrana/adminer",
-        "version": "4.8.1",
-        "license": [
-	        "Apache-2.0",
-	        "GPL-2.0-only"
-	    ],
-        "license_link": {
-            "Apache-2.0": "https://raw.githubusercontent.com/spdx/license-list-data/main/text/Apache-2.0.txt",
-            "GPL-2.0-only": "https://raw.githubusercontent.com/spdx/license-list-data/main/text/GPL-2.0-only.txt"
-    	},
-        "description": "Database management in a single PHP file.",
-        "homepage": "https://www.adminer.org/"
-    }
-]
+[]

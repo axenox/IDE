@@ -21,7 +21,11 @@ use this tool for migrations, maintenance commands or any intentional data chang
   assistant can instead obtain the connection from its prompt.
 - **explain:** Boolean tool argument. Set it to `true` to append AdminNeo's dialect-specific EXPLAIN
   result and, when supported by the database driver, actual runtime and I/O statistics for this
-  invocation. Defaults to `false`. Adminer integrations return empty diagnostic results.
+  invocation. Defaults to `false`.
+
+SQL tools use AdminNeo from the `axenox/adminneo` dependency. The bundled Adminer 4 engine and
+the `SQL_ADMIN.ENGINE` switch have been removed. The facade accepts both `/api/ide/adminneo/`
+and the legacy `/api/ide/adminer/` prefix, with both routes handled by AdminNeo.
 
 ### Result
 

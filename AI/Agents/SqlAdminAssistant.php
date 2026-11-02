@@ -11,7 +11,7 @@ use exface\Core\Templates\Placeholders\ArrayPlaceholders;
 use exface\Core\Templates\BracketHashStringTemplateRenderer;
 
 /**
- * AI assistant for use with the built-in SQL admin tool (based on PHP Adminer)
+ * AI assistant for use with the built-in SQL admin tool (based on AdminNeo)
  * 
  * @author Andrej Kabachnik
  */

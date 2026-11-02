@@ -7,7 +7,6 @@ use axenox\GenAI\Exceptions\AiToolRuntimeError;
 use axenox\GenAI\Interfaces\AiTaskHandlerInterface;
 use axenox\GenAI\Interfaces\AiToolResultInterface;
 use axenox\IDE\AI\Agents\SqlAdminAssistant;
-use axenox\IDE\Common\Adminer4API;
 use axenox\IDE\Common\AdminneoAPI;
 use axenox\IDE\Common\SqlAdminApiInterface;
 use axenox\IDE\Facades\IDEFacade;
@@ -64,10 +63,7 @@ class SQLPerformTool extends AbstractAiTool
     }
 
     /**
-     * Instantiates the configured SQL admin API (Adminer or AdminNeo).
-     *
-     * The engine is selected via the `SQL_ADMIN.ENGINE` option of the axenox.IDE app, so the AI
-     * tools follow the same switch as the facade.
+    * Instantiates the AdminNeo API shared by the SQL administration tools.
      *
      * @return SqlAdminApiInterface
      */
@@ -76,13 +72,7 @@ class SQLPerformTool extends AbstractAiTool
         /** @var \axenox\IDE\Facades\IDEFacade $ideFacade */
         $ideFacade = FacadeFactory::createFromString(IDEFacade::class, $this->getWorkbench());
         $baseUrl = $ideFacade->getUrlRouteDefault() . '/';
-        $engine = mb_strtolower((string) $this->getWorkbench()->getApp('axenox.IDE')->getConfig()->getOption('SQL_ADMIN.ENGINE'));
-        switch ($engine) {
-            case 'adminneo':
-                return new AdminneoAPI($this->getWorkbench(), $baseUrl, 'adminneo/', 'index.php', []);
-            default:
-                return new Adminer4API($this->getWorkbench(), $baseUrl, 'adminer/', 'index.php', []);
-        }
+        return new AdminneoAPI($this->getWorkbench(), $baseUrl, 'adminneo/', 'index.php', []);
     }
 
     /**

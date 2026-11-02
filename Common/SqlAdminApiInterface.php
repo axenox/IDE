@@ -6,16 +6,9 @@ use exface\Core\Interfaces\WorkbenchDependantInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
 /**
- * Common contract for the embeddable SQL administration tools (Adminer / AdminNeo).
+ * Contract shared by the embeddable SQL administration UI and AI tools.
  *
- * The IDE can run different SQL admin front-ends behind the same facade route. Each of them is
- * wrapped by an implementation of this interface, so {@see \axenox\IDE\Facades\IDEFacade} and the
- * AI tools can switch between them simply by instantiating a different class.
- *
- * Current implementations:
- *
- * - {@see AdminneoAPI} - the axenox/adminneo fork (cleaner default theme, config-file driven).
- * - {@see Adminer4API} - the legacy bundled Adminer 4.8.2 sources.
+ * Implemented by {@see AdminneoAPI} using the axenox/adminneo package.
  *
  * @author andrej.kabachnik
  */

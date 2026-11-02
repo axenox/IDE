@@ -1,7 +1,6 @@
 <?php
 namespace axenox\IDE\Facades;
 
-use axenox\IDE\Common\Adminer4API;
 use axenox\IDE\Common\AdminneoAPI;
 use exface\Core\CommonLogic\Filesystem\LocalFileInfo;
 use exface\Core\DataTypes\FilePathDataType;
@@ -42,16 +41,9 @@ class IDEFacade extends AbstractHttpFacade
         switch (true) {     
             case StringDataType::startsWith($pathInFacade, 'codiware/'):
                 return $this->createResponseFromCodiware($request, $pathInFacade);
-            // AdminNeo - the cleaner Adminer fork. Reachable simultaneously with Adminer, so both
-            // engines can be compared side by side. Switch the default engine used by the UI/AI
-            // tools via the config option SQL_ADMIN.ENGINE.
             case StringDataType::startsWith($pathInFacade, 'adminneo/'):
-                $api = new AdminneoAPI($this->getWorkbench(), $this->getUrlRouteDefault() . '/', $path, 'index.php', $this->buildHeadersCommon());
-                return $api->handle($request);
-            // Adminer with autologin
             case StringDataType::startsWith($pathInFacade, 'adminer/'):
-            case StringDataType::startsWith($pathInFacade, 'externals/'):
-                $api = new Adminer4API($this->getWorkbench(), $this->getUrlRouteDefault() . '/', $path, 'index.php', $this->buildHeadersCommon());
+                $api = new AdminneoAPI($this->getWorkbench(), $this->getUrlRouteDefault() . '/', $path, 'index.php', $this->buildHeadersCommon());
                 return $api->handle($request);
         }
         

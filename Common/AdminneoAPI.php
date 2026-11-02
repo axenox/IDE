@@ -28,8 +28,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * - Driver options, including native MS SQL SQLSRV connection options, are first-class config
  *   values, so connection specifics are expressed as configuration rather than host-string hacks.
  *
- * To use the legacy bundled Adminer front-end, instantiate {@see Adminer4API} instead. Both
- * implementations use {@see SqlAdminApiInterface}.
+ * Implements {@see SqlAdminApiInterface} for both the facade and AI tools.
  *
  * @author andrej.kabachnik
  */
@@ -59,6 +58,9 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
     {
         $path = $request->getUri()->getPath();
         $innerPath = StringDataType::substringAfter($path, $this->getBaseUrlPath(), '');
+        if (StringDataType::startsWith($innerPath, 'adminer/')) {
+            $innerPath = self::URL_SEGMENT . substr($innerPath, strlen('adminer/'));
+        }
         return $this->runAdminneo($innerPath);
     }
 
