@@ -6,6 +6,10 @@
         "axenox/adminneo": "*",
         "npm-asset/svg-pan-zoom": "^3"
     },
+    "license": [
+        "GPL-3.0+",
+        "proprietary"
+    ],
     "support": {
         "source": "https://github.com/axenox/ide",
         "docs": "https://github.com/axenox/ide/blob/1.x-dev/Docs",
