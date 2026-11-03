@@ -6,6 +6,9 @@
         "axenox/adminneo": "*",
         "npm-asset/svg-pan-zoom": "^3"
     },
+    "require-dev": {
+        "phpunit/phpunit": "^9.6||^10||^11||^12||^13"
+    },
     "license": [
         "GPL-3.0+",
         "proprietary"
@@ -22,7 +25,8 @@
         "exclude-from-classmap": [
             "/Config/",
             "/Translations/",
-            "/Model/"
+            "/Model/",
+            "/Tests/"
         ]
     },
     "extra": {

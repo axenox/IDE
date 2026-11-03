@@ -7,6 +7,7 @@ use exface\Core\DataTypes\FilePathDataType;
 use exface\Core\DataTypes\JsonDataType;
 use exface\Core\DataTypes\StringDataType;
 use exface\Core\Exceptions\UnexpectedValueException;
+use exface\Core\Exceptions\InternalError;
 use exface\Core\Factories\DataSheetFactory;
 use exface\Core\Interfaces\DataSources\SqlDataConnectorInterface;
 use GuzzleHttp\Psr7\Response;
@@ -552,6 +553,9 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
     /**
      * Runs the AdminNeo fork from source and returns its output (when capturing).
      *
+     * PHP diagnostics use the workbench logger even when PHP error display is disabled.
+     * Crashes propagate to the facade or calling action for logging and error rendering.
+     *
      * @param bool $capture
      * @return string|NULL
      */
@@ -567,8 +571,14 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
             $this->startIsolatedSession();
         }
         $cwd = getcwd();
-        chdir($this->getForkAdminPath());
-        if ($capture) {
+        $errorHandler = new AdminneoErrorHandler($this->getWorkbench()->getLogger());
+        try {
+            chdir($this->getForkAdminPath());
+            if (! $capture) {
+                // Downloads, AJAX and assets may exit here; Core's logger still handles fatals.
+                require $this->getWrapperPath();
+                return null;
+            }
             // AdminNeo streams its output: slow_query() and the running-query feedback on the SQL
             // page call ob_flush()/flush() mid-render. The callback buffer below returns an empty
             // string to swallow the *content* of those flushes, but the bare flush() still forces
@@ -596,16 +606,15 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
                 if (ob_get_level() >= $baseLevel) {
                     ob_end_clean();
                 }
-                chdir($cwd);
-                $this->restoreOuterSession();
             }
             return ltrim($captured, "\0");
+        } catch (\Throwable $e) {
+            throw new InternalError('AdminNeo failed: ' . $e->getMessage(), null, $e);
+        } finally {
+            $errorHandler->restore();
+            chdir($cwd);
+            $this->restoreOuterSession();
         }
-        // Streaming mode (asset requests): AdminNeo emits the file and exit()s, so anything below
-        // the require is only reached if the app returns normally.
-        require $this->getWrapperPath();
-        chdir($cwd);
-        return null;
     }
 
     /**
