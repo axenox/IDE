@@ -68,7 +68,7 @@ class SQLReadTool extends SQLPerformTool
             }
             $result = implode("\n\n", $resultParts);
         }
-        return new AiToolResultString($this, $arguments, $result, $this->getReturnDataType());
+        return new AiToolResultString($this->getWorkbench(), $result, $this->getReturnDataType());
     }
 
     /**

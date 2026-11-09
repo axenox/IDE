@@ -2,6 +2,14 @@
 
 [English](index.md)
 
+## Gemeinsame Werkzeugergebnisse
+
+SQL-Werkzeuge verwenden die rekonstruierbaren Ergebnisse von GenAI. Markdown-Wert, Datentyp,
+Anhang, geordnete Fehler und Warnungen, Fehlerstatus und Ausführungsdauer bleiben unabhängig vom
+ursprünglichen Werkzeug und seinen Argumenten erhalten. Die Wiederherstellung führt SQL nicht
+erneut aus und erzeugt keine flüchtigen Exceptions. Fehler ab Stufe `ERROR` markieren ein Ergebnis
+als fehlgeschlagen; Warnungen nicht. Der gemeinsame Executor meldet angehängte Diagnosen genau einmal.
+
 ## SQLSelectTool
 
 Fuehrt eine einzelne, lesend ausgerichtete SQL-Abfrage aus und gibt das Ergebnis als Markdown-Tabelle

@@ -28,7 +28,7 @@ class SQLDumpDDLTool extends SQLPerformTool
         list($tableName, $schema, $connectionAlias) = $arguments;
         
         $result = $this->getDDL($this->getConnection($agent, $prompt, $connectionAlias), $tableName, $schema);
-        return new AiToolResultString($this, $arguments, $result, $this->getReturnDataType());
+        return new AiToolResultString($this->getWorkbench(), $result, $this->getReturnDataType());
     }
 
     /**

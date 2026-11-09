@@ -2,6 +2,14 @@
 
 [Deutsch](index_german.md)
 
+## Shared tool results
+
+SQL tools use GenAI's reconstructable tool results. The Markdown value, data type, appendix,
+ordered errors and warnings, failure state, and execution duration are retained independently
+of the originating tool and its arguments. Restoration does not rerun SQL or recreate transient
+exceptions. Errors at level `ERROR` or higher mark a result as failed; warnings do not. Attached
+diagnostics are reported once by the shared executor.
+
 ## SQLSelectTool
 
 Runs one read-oriented SQL query and returns the result as a Markdown table.

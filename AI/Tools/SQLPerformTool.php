@@ -38,7 +38,7 @@ class SQLPerformTool extends AbstractAiTool
         list($statement, $connectionAlias) = $arguments;
         
         $result = $this->callSQL($statement, $this->getConnection($agent, $prompt, $connectionAlias));
-        return new AiToolResultString($this, $arguments, $result, $this->getReturnDataType());
+        return new AiToolResultString($this->getWorkbench(), $result, $this->getReturnDataType());
     }
     
     protected function getConnection(AiTaskHandlerInterface $agent, TaskInterface $prompt, ?string $connectionAlias = null) : SqlDataConnectorInterface
