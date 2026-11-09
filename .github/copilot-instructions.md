@@ -4,9 +4,13 @@ This package contains the `axenox.IDE` app, which is an add-on to the ExFace no-
 
 ## The platform
 
-The platform core is available in `vendor/exface/core`. All [core instructions](../../../exface/core/.github/copilot-instructions.md) apply to this package as well!
+The platform core is available in `<installation_path>/vendor/exface/core`. All [core instructions](../../../exface/core/.github/copilot-instructions.md) apply to this package as well!
 
-Always follow our [PHP](../../../exface/Core/Docs/developer_docs/code_conventions/PHP/Conventions.md) guidelines when writing code. 
+## Global rules
+
+- **Always follow** our [PHP](../../../exface/Core/Docs/developer_docs/code_conventions/PHP/Conventions.md) guidelines when writing PHP code
+- **Always follow** [UXON instructions](../../../exface/Core/.github/instructions/uxon.instructions.md) when working with configurable model prototypes.
+- Ask the **Workbench code reviewer** agent to review your changes and fix issues required for completion before you report your task as done.
 
 ## Documentation
 
