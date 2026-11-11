@@ -2,6 +2,10 @@
 
 [Deutsch](index_german.md)
 
+SQL tool results use GenAI's detached textual result contract. The conversation retains the
+complete value and durable diagnostics independently of the original tool instance. Continuing a
+conversation restores the recorded result; it never reruns a historical SQL statement.
+
 ## SQLSelectTool
 
 Runs one read-oriented SQL query and returns the result as a Markdown table.

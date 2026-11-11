@@ -25,6 +25,11 @@ use exface\Core\Interfaces\WorkbenchInterface;
  * 
  * **WARNING:** This tool is dangerous! NEVER run it on production databases!!!
  * 
+ * ```json
+ * {"alias": "axenox.IDE.SQLPerformTool"}
+ * 
+ * ```
+ * 
  * @author Andrej Kabachnik, Brooklyn Fränzschky
  */
 class SQLPerformTool extends AbstractAiTool
@@ -38,9 +43,18 @@ class SQLPerformTool extends AbstractAiTool
         list($statement, $connectionAlias) = $arguments;
         
         $result = $this->callSQL($statement, $this->getConnection($agent, $prompt, $connectionAlias));
-        return new AiToolResultString($this, $arguments, $result, $this->getReturnDataType());
+        return new AiToolResultString($this->getWorkbench(), $result, $this->getReturnDataType());
     }
     
+    /**
+     * Resolves the explicit or agent-provided SQL connection for this invocation.
+     * 
+     * @throws AiToolRuntimeError
+     * @param AiTaskHandlerInterface $agent
+     * @param TaskInterface $prompt
+     * @param string|null $connectionAlias
+     * @return SqlDataConnectorInterface
+     */
     protected function getConnection(AiTaskHandlerInterface $agent, TaskInterface $prompt, ?string $connectionAlias = null) : SqlDataConnectorInterface
     {
         switch (true) {
@@ -56,6 +70,13 @@ class SQLPerformTool extends AbstractAiTool
         return $connection;
     }
     
+    /**
+     * Executes the SQL statement and renders its returned rows as Markdown.
+     * 
+     * @param string $sql
+     * @param SqlDataConnectorInterface $connection
+     * @return string
+     */
     protected function callSQL(string $sql, SqlDataConnectorInterface $connection): string
     {
         $array = $this->getSqlAdminApi()->runSql($connection, $sql);
@@ -64,7 +85,7 @@ class SQLPerformTool extends AbstractAiTool
 
     /**
     * Instantiates the AdminNeo API shared by the SQL administration tools.
-     *
+     * 
      * @return SqlAdminApiInterface
      */
     protected function getSqlAdminApi() : SqlAdminApiInterface

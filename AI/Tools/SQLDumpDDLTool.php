@@ -15,6 +15,11 @@ use exface\Core\Interfaces\WorkbenchInterface;
 /**
  * Returns the DDL of a table, view, stored procedure or function from an SQL database.
  * 
+ * ```json
+ * {"alias": "axenox.IDE.SQLDumpDDLTool"}
+ * 
+ * ```
+ * 
  * @author Andrej Kabachnik, Brooklyn Fränzschky
  */
 class SQLDumpDDLTool extends SQLPerformTool
@@ -28,12 +33,12 @@ class SQLDumpDDLTool extends SQLPerformTool
         list($tableName, $schema, $connectionAlias) = $arguments;
         
         $result = $this->getDDL($this->getConnection($agent, $prompt, $connectionAlias), $tableName, $schema);
-        return new AiToolResultString($this, $arguments, $result, $this->getReturnDataType());
+        return new AiToolResultString($this->getWorkbench(), $result, $this->getReturnDataType());
     }
 
     /**
      * Returns the CREATE statement for a table, view or routine supported by the active SQL admin API.
-     *
+     * 
      * @param SqlDataConnectorInterface $connection
      * @param string $tableName Legacy argument name; may also contain a view, procedure or function name.
      * @param string|null $schema

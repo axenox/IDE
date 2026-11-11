@@ -21,6 +21,11 @@ use exface\Core\Interfaces\WorkbenchInterface;
  * credentials restricted to read-only access are required to guarantee that the query cannot
  * modify data because SELECT statements and user-defined functions can have side effects.
  * 
+ * ```json
+ * {"alias": "axenox.IDE.SQLReadTool"}
+ * 
+ * ```
+ * 
  * @author Andrej Kabachnik
  */
 class SQLReadTool extends SQLPerformTool
@@ -68,19 +73,19 @@ class SQLReadTool extends SQLPerformTool
             }
             $result = implode("\n\n", $resultParts);
         }
-        return new AiToolResultString($this, $arguments, $result, $this->getReturnDataType());
+        return new AiToolResultString($this->getWorkbench(), $result, $this->getReturnDataType());
     }
 
     /**
      * Set to TRUE to allow multiple read-oriented queries in one tool call.
-     *
+     * 
      * Every query is validated independently. This option does not make SQL validation a security
      * boundary; use database credentials restricted to read-only access for that guarantee.
-     *
+     * 
      * @uxon-property allow_multiple_queries
      * @uxon-type boolean
      * @uxon-default false
-     *
+     * 
      * @param bool $value
      * @return SQLReadTool
      */
