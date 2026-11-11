@@ -109,8 +109,8 @@ class SQLReadTool extends SQLPerformTool
                 ->setDescription('One or more complete SELECT queries to execute'),
             (new ServiceParameter($self))
                 ->setName('connection')
-                ->setDescription('UID or namespaced alias of the SQL data connection.')
-                ->setRequired(true)
+                ->setDescription('UID or namespaced alias of the SQL data connection. Omit or use null to use the SQL admin assistant connection. Required for other agents.')
+                ->setRequired(false)
                 ->setExamples(['exface.Core.METAMODEL_DB', '0x11ea72c00f0fadeca3480205857feb80']),
             (new ServiceParameter($self))
                 ->setDataType(new UxonObject(['alias' => 'exface.Core.Boolean']))

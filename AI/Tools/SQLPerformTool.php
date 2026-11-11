@@ -110,8 +110,8 @@ class SQLPerformTool extends AbstractAiTool
                 ->setRequired(true),
             (new ServiceParameter($self))
                 ->setName('connection')
-                ->setRequired(true)
-                ->setDescription('UID or namespaced alias of the SQL data connection.')
+                ->setRequired(false)
+                ->setDescription('UID or namespaced alias of the SQL data connection. Omit or use null to use the SQL admin assistant connection. Required for other agents.')
                 ->setExamples(['exface.Core.METAMODEL_DB', '0x11ea72c00f0fadeca3480205857feb80'])
         ];
     }

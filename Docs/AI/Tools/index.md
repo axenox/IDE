@@ -6,6 +6,15 @@ SQL tool results use GenAI's detached textual result contract. The conversation 
 complete value and durable diagnostics independently of the original tool instance. Continuing a
 conversation restores the recorded result; it never reruns a historical SQL statement.
 
+## SQL connection arguments
+
+The `connection` argument of [SQLPerformTool](../../../AI/Tools/SQLPerformTool.php)
+(`axenox.IDE.SQLPerformTool`) and [SQLReadTool](../../../AI/Tools/SQLReadTool.php)
+(`axenox.IDE.SQLReadTool`) accepts a connection UID or namespaced alias. Omit it or pass
+JSON `null` to use the SQL admin assistant's connection from the current prompt.
+Other agents must provide a connection explicitly; otherwise the call fails with a
+missing-connection error. The `statement` argument remains required for both tools.
+
 ## SQLSelectTool
 
 Runs one read-oriented SQL query and returns the result as a Markdown table.

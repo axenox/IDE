@@ -64,11 +64,11 @@ class SQLDumpDDLTool extends SQLPerformTool
                 ->setRequired(true),
             (new ServiceParameter($self))
                 ->setName('schema')
-                ->setRequired(true)
+                ->setRequired(false)
                 ->setDescription('Schema containing the table, view, stored procedure or function. Use `null` if it is not applicable'),
             (new ServiceParameter($self))
                 ->setName('connection')
-                ->setRequired(true)
+                ->setRequired(false)
                 ->setDescription('UID or namespaced alias of the SQL data connection.')
                 ->setExamples(['exface.Core.METAMODEL_DB', '0x11ea72c00f0fadeca3480205857feb80'])
         ];
