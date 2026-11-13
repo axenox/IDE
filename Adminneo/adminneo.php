@@ -56,12 +56,12 @@ if (! function_exists('adminneo_instance')) {
             $plugins[] = new \AdminNeo\FrameSupportPlugin($frameAncestors);
         }
 
-        // This integration-specific renderer uses the Mermaid distributions already shipped by
-        // exface/core. It is opt-out because the native renderer remains AdminNeo's default when
+        // This integration-specific renderer uses the locally installed Pele distribution.
+        // It is opt-out because the native renderer remains AdminNeo's default when
         // the IDE plugin is not registered.
-        if (!empty($context['mermaidUrl']) && !empty($context['svgPanZoomUrl'])) {
+        if (!empty($context['peleUrl']) && !empty($context['svgPanZoomUrl'])) {
             require_once __DIR__ . '/MermaidSchemaPlugin.php';
-            $plugins[] = new \AdminNeo\MermaidSchemaPlugin($context['mermaidUrl'], $context['svgPanZoomUrl']);
+            $plugins[] = new \AdminNeo\MermaidSchemaPlugin($context['peleUrl'], $context['svgPanZoomUrl']);
         }
 
         // Infer navigation links from column naming conventions when the connection explicitly

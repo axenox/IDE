@@ -3,28 +3,30 @@
 namespace AdminNeo;
 
 /**
- * Replaces AdminNeo's draggable schema view with an interactive Mermaid ER diagram.
+ * Replaces AdminNeo's draggable schema view with a Pele-rendered Mermaid ER diagram.
  *
- * Mermaid and svg-pan-zoom are supplied by the host application so the plugin neither downloads
+ * Pele and svg-pan-zoom are supplied by the host application so the plugin neither downloads
  * assets nor imposes a second library version. Views and cross-database foreign keys are omitted,
  * matching AdminNeo's native schema page.
  */
 class MermaidSchemaPlugin extends Plugin
 {
-    /** Keep generated Mermaid source below its default 50,000 character safety limit. */
+    /** Keep generated Mermaid source below Pele's default 50,000 character safety limit. */
     private const MAX_DIAGRAM_TEXT_SIZE = 48000;
 
     /** Default and user-selectable bounds for recursive foreign-key traversal. */
-    private const DEFAULT_RELATION_DEPTH = 3;
+    private const DEFAULT_RELATION_DEPTH = 1;
     private const MAX_RELATION_DEPTH = 10;
 
-    private string $mermaidUrl;
+    private string $peleUrl;
     private string $panZoomUrl;
 
-    /** Creates a schema renderer using pinned, locally hosted JavaScript distributions. */
-    public function __construct(string $mermaidUrl, string $panZoomUrl)
+    /**
+     * Creates a schema renderer using locally hosted JavaScript distributions.
+     */
+    public function __construct(string $peleUrl, string $panZoomUrl)
     {
-        $this->mermaidUrl = $mermaidUrl;
+        $this->peleUrl = $peleUrl;
         $this->panZoomUrl = $panZoomUrl;
     }
 
@@ -38,7 +40,7 @@ class MermaidSchemaPlugin extends Plugin
             }
             return;
         }
-        echo script_src($this->mermaidUrl), script_src($this->panZoomUrl);
+        echo script_src($this->peleUrl), script_src($this->panZoomUrl);
         echo <<<'HTML'
 <style>
 .mermaid-schema-filter .fieldset-content { display: flex; flex-wrap: wrap; align-items: end; gap: .75rem; }
@@ -48,8 +50,17 @@ class MermaidSchemaPlugin extends Plugin
 .mermaid-schema-filter input[type="submit"] { margin-bottom: 3px; }
 .mermaid-schema { position: relative; height: calc(100vh - 13rem); min-height: 30rem; overflow: visible; }
 .mermaid-schema > svg { width: 100%; height: 100%; }
-.mermaid-schema .svg-hover-highlight { stroke-width: 4px !important; }
-.mermaid-schema .svg-selected { stroke-width: 6px !important; }
+.mermaid-schema .pele { --pele-bg: var(--table-bg); --pele-fg: var(--body-text); --pele-muted: var(--note-text); --pele-line: var(--body-text); --pele-surface: var(--table-header-bg); --pele-border: var(--table-border); --pele-radius: 0px; }
+.mermaid-schema .pele-entity > .pele-label { fill: var(--link-text); }
+.mermaid-schema .pele-er-stripes { display: none; }
+.mermaid-schema .schema-row { fill: var(--table-bg); }
+.mermaid-schema .schema-row-border { stroke: var(--table-row-border); stroke-width: 1px; }
+.mermaid-schema .pele-entity.svg-hover-highlight .schema-row { fill: var(--list-hover); }
+.mermaid-schema .pele-entity.svg-selected .schema-row { fill: var(--list-active); }
+.mermaid-schema .pele-entity.svg-selected.svg-hover-highlight .schema-row { fill: var(--list-active-hover); }
+.mermaid-schema .pele-entity { cursor: pointer; }
+.mermaid-schema path.svg-hover-highlight { stroke-width: 4px !important; }
+.mermaid-schema path.svg-selected { stroke-width: 6px !important; }
 .mermaid-schema-menu { position: fixed; z-index: 20; min-width: 14rem; padding: .75rem 1rem; background: var(--panel-bg); color: var(--body-text); border: 1px solid var(--panel-border); border-radius: var(--box-border-radius); box-shadow: 0 4px 18px rgba(0,0,0,.2); }
 .mermaid-schema-menu h3 { margin: 0 0 .5rem; color: var(--header-text); font-size: 1rem; }
 .mermaid-schema-menu p { margin: .4rem 0; color: var(--note-text); }
@@ -123,7 +134,7 @@ HTML;
                 $keys = [];
                 if (!empty($field['primary'])) $keys[] = 'PK';
                 if (in_array($field['field'], $foreignColumns, true)) $keys[] = 'FK';
-                $type = self::mermaidToken($field['full_type'] ?? $field['type'] ?? 'value');
+                $type = self::mermaidType($field['full_type'] ?? $field['type'] ?? 'value');
                 $name = self::mermaidToken($field['field']);
                 $comment = trim(($field['field'] !== $name ? $field['field'] . ' ' : '') . ($field['comment'] ?? ''));
                 $line = "        $type $name" . ($keys ? ' ' . implode(',', $keys) : '');
@@ -147,7 +158,7 @@ HTML;
             }
         }
 
-        // Mermaid rejects the complete diagram definition (not an individual label) above its
+        // Pele rejects the complete diagram definition (not an individual label) above its
         // default 50,000 character limit. Reduce the longest optional column descriptions first,
         // while retaining their full values in metadata for SVG tooltips.
         $diagramText = implode("\n", $lines);
@@ -235,6 +246,15 @@ HTML;
         return substr($readable, 0, 40) . '_' . substr(sha1($value), 0, 8);
     }
 
+    /**
+     * Keeps type parameters readable without adding identifier uniqueness hashes.
+     */
+    private static function mermaidType(string $value): string
+    {
+        $type = preg_replace('/[^A-Za-z0-9_(),\[\].-]/', '_', $value);
+        return $type === '' || !ctype_alpha($type[0]) ? 'v_' . $type : $type;
+    }
+
     /** Escapes text embedded in a Mermaid quoted label or comment. */
     private static function mermaidText(string $value): string { return str_replace(["\\", '"', "\r", "\n"], ['\\\\', '&quot;', ' ', ' '], $value); }
 
@@ -268,6 +288,7 @@ HTML;
         $label = 'Open schema';
         $tableJson = self::jsonForHtml($tableName);
         $contentJson = self::jsonForHtml($icon . $label);
+        $defaultDepth = self::DEFAULT_RELATION_DEPTH;
         return <<<JS
 addEventListener('DOMContentLoaded', () => {
     const tabs = document.querySelector('.top-tabs');
@@ -278,7 +299,7 @@ addEventListener('DOMContentLoaded', () => {
     ['table', 'select', 'create', 'view', 'edit'].forEach(key => url.searchParams.delete(key));
     url.searchParams.set('schema', '');
     url.searchParams.set('schema-filter', $tableJson);
-    url.searchParams.set('schema-depth', '3');
+    url.searchParams.set('schema-depth', '$defaultDepth');
     const link = document.createElement('a');
     link.href = url.href;
     link.innerHTML = $contentJson;
@@ -289,7 +310,9 @@ addEventListener('DOMContentLoaded', () => {
 JS;
     }
 
-    /** Returns the browser controller for rendering, pan/zoom, selection and context actions. */
+    /**
+     * Returns the browser controller for rendering, pan/zoom, selection and context actions.
+     */
     private function clientScript(): string
     {
         return <<<'JS'
@@ -299,11 +322,50 @@ JS;
     const metadata = JSON.parse(document.getElementById('mermaid-schema-data').textContent);
     const showError = error => host.replaceChildren(Object.assign(document.createElement('div'), {className: 'mermaid-schema-error', textContent: 'The database diagram could not be rendered: ' + (error.message || error)}));
     try {
-        const sourceLength = host.querySelector('.mermaid').textContent.length;
-        mermaid.initialize({startOnLoad: false, securityLevel: 'strict', maxTextSize: Math.max(50000, sourceLength + 1), theme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default'});
-        await mermaid.run({nodes: [host.querySelector('.mermaid')]});
+        const source = host.querySelector('.mermaid').textContent;
+        host.innerHTML = pele.render(source, {idPrefix: 'adminneo-schema', limit: Math.max(50000, source.length + 1), autoDirection: false, responsive: false, fontSize: 14, fontFamily: getComputedStyle(host).fontFamily, links: false, images: false}).svg;
         const svg = host.querySelector('svg');
-        if (!svg) throw new Error('Mermaid did not create an SVG element.');
+        if (!svg) throw new Error('Pele did not create an SVG element.');
+        // Pele lays out SVG text rather than HTML cells. Derive row borders from the rendered
+        // baselines so wrapped comments and varying attribute counts keep their layout.
+        svg.querySelectorAll('.pele-entity').forEach(node => {
+            const attributes = node.querySelector('.pele-er-attributes');
+            if (!attributes) return;
+            const outline = node.querySelector('rect[fill="none"]');
+            const divider = node.querySelector('.pele-er-divider');
+            const rows = Array.from(attributes.querySelectorAll('.pele-er-name'));
+            const backgrounds = document.createElementNS(svg.namespaceURI, 'g');
+            const x = outline.x.baseVal.value, width = outline.width.baseVal.value;
+            const bottom = outline.y.baseVal.value + outline.height.baseVal.value;
+            let top = divider.getBBox().y;
+            const baselineOffset = rows.length ? rows[0].y.baseVal[0].value - top : 0;
+            const body = document.createElementNS(svg.namespaceURI, 'rect');
+            body.setAttribute('x', x);
+            body.setAttribute('y', top);
+            body.setAttribute('width', width);
+            body.setAttribute('height', bottom - top);
+            body.setAttribute('fill', 'var(--table-bg)');
+            backgrounds.appendChild(body);
+            rows.forEach((row, index) => {
+                const next = rows[index + 1];
+                const end = next ? next.y.baseVal[0].value - baselineOffset : bottom;
+                const rect = document.createElementNS(svg.namespaceURI, 'rect');
+                rect.setAttribute('class', 'schema-row');
+                rect.setAttribute('x', x);
+                rect.setAttribute('y', top);
+                rect.setAttribute('width', width);
+                rect.setAttribute('height', end - top);
+                backgrounds.appendChild(rect);
+                if (next) {
+                    const border = document.createElementNS(svg.namespaceURI, 'path');
+                    border.setAttribute('class', 'schema-row-border');
+                    border.setAttribute('d', `M${x},${end}h${width}`);
+                    backgrounds.appendChild(border);
+                }
+                top = end;
+            });
+            node.insertBefore(backgrounds, divider);
+        });
         svg.setAttribute('height', host.clientHeight + 'px');
         svg.style.maxWidth = 'none';
         const panZoom = svgPanZoom(svg, {zoomEnabled: true, controlIconsEnabled: true, fit: true, center: true, preventMouseEventsDefault: false});
@@ -312,10 +374,10 @@ JS;
         const placeMenu = event => { menu.style.left = Math.min(event.clientX + 10, innerWidth - 250) + 'px'; menu.style.top = Math.min(event.clientY + 10, innerHeight - 180) + 'px'; menu.classList.remove('hidden'); };
         const addText = (parent, tag, text) => { const child = document.createElement(tag); child.textContent = text; parent.appendChild(child); return child; };
         const actionUrl = (action, table) => { const url = new URL(location.href); ['schema', 'table', 'select', 'create'].forEach(key => url.searchParams.delete(key)); url.searchParams.set(action, table); return url.href; };
-        const centerNode = node => { const box = node.getBBox(), sizes = panZoom.getSizes(), zoom = sizes.realZoom; panZoom.pan({x: sizes.width / 2 - (box.x + box.width / 2) * zoom, y: sizes.height / 2 - (box.y + box.height / 2) * zoom}); };
-        const entityNodes = Array.from(svg.querySelectorAll('[id^="entity-"]'));
+        const centerNode = node => { const box = node.getBBox(), transform = node.transform.baseVal.consolidate(), center = new DOMPoint(box.x + box.width / 2, box.y + box.height / 2).matrixTransform(transform ? transform.matrix : new DOMMatrix()), sizes = panZoom.getSizes(), zoom = sizes.realZoom; panZoom.pan({x: sizes.width / 2 - center.x * zoom, y: sizes.height / 2 - center.y * zoom}); };
+        const entityNodes = Array.from(svg.querySelectorAll('.pele-entity[data-id]'));
         entityNodes.forEach(node => {
-            const table = metadata.tables.find(candidate => node.id.includes(candidate.id));
+            const table = metadata.tables.find(candidate => node.dataset.id === candidate.id);
             if (!table) return;
             if (table.truncatedFields && table.truncatedFields.length) {
                 const descriptions = table.fields.filter(field => table.truncatedFields.includes(field.field)).map(field => field.field + ': ' + (field.comment || ''));
@@ -333,14 +395,14 @@ JS;
                 menu.appendChild(list); placeMenu(event);
             });
         });
-        Array.from(svg.querySelectorAll('.relationshipLine')).forEach((path, index) => {
+        Array.from(svg.querySelectorAll('.pele-edges > .pele-edge > path:not(.pele-marker)')).forEach((path, index) => {
             const hit = path.cloneNode(false); hit.removeAttribute('marker-start'); hit.removeAttribute('marker-end'); hit.style.cssText = 'stroke:transparent;stroke-width:20;fill:none;pointer-events:stroke'; path.after(hit);
             hit.addEventListener('mouseenter', () => path.classList.add('svg-hover-highlight'));
             hit.addEventListener('mouseleave', () => path.classList.remove('svg-hover-highlight'));
             hit.addEventListener('click', event => {
                 event.stopPropagation(); clearSelection(); path.classList.add('svg-selected'); selected.add(path); menu.replaceChildren();
                 const relation = metadata.relations[index]; addText(menu, 'h3', 'Relationship'); addText(menu, 'p', relation ? relation.label : '');
-                [['Source', relation && relation.source], ['Target', relation && relation.target]].forEach(action => { const button = addText(menu, 'button', 'Go to ' + action[0]); button.type = 'button'; button.className = 'button'; button.addEventListener('click', () => { const target = entityNodes.find(node => node.id.includes(action[1])); if (target) centerNode(target); }); });
+                [['Source', relation && relation.source], ['Target', relation && relation.target]].forEach(action => { const button = addText(menu, 'button', 'Go to ' + action[0]); button.type = 'button'; button.className = 'button'; button.addEventListener('click', () => { const target = entityNodes.find(node => node.dataset.id === action[1]); if (target) centerNode(target); }); });
                 placeMenu(event);
             });
         });

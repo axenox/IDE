@@ -4,6 +4,7 @@
         "exface/core": "^1.0",
         "kabachello/codiware": "~0.8||^1.0",
         "axenox/adminneo": "*",
+        "npm-asset/pele": "^1.13",
         "npm-asset/svg-pan-zoom": "^3"
     },
     "require-dev": {

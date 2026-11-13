@@ -463,7 +463,7 @@ class AdminneoAPI extends InclusionAPI implements SqlAdminApiInterface
         $GLOBALS[self::CONTEXT_GLOBAL] = [
             'config' => $config,
             'serviceTitle' => 'SQL Admin',
-            'mermaidUrl' => $basePath . 'vendor/exface/core/Facades/AbstractAjaxFacade/js/mermaid/mermaid.min.js',
+            'peleUrl' => $basePath . 'vendor/npm-asset/pele/dist/pele.global.js',
             'svgPanZoomUrl' => $basePath . 'vendor/exface/core/Facades/AbstractAjaxFacade/js/svg-pan-zoom.min.js'
         ];
     }
